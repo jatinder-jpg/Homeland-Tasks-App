@@ -41,6 +41,7 @@ export function SettingsView({
   email,
   organization,
   isAdmin,
+  isSuperAdmin,
   storageUsageBytes,
 }: {
   fullName: string;
@@ -48,6 +49,7 @@ export function SettingsView({
   email: string;
   organization: Organization;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   storageUsageBytes: number;
 }) {
   const [tab, setTab] = useState<TabKey>("profile");
@@ -72,7 +74,7 @@ export function SettingsView({
 
       <div className="min-w-0 flex-1 p-6">
         {tab === "profile" && <ProfileTab fullName={fullName} phone={phone} email={email} />}
-        {tab === "organization" && <OrganizationTab organization={organization} isAdmin={isAdmin} />}
+        {tab === "organization" && <OrganizationTab organization={organization} isSuperAdmin={isSuperAdmin} />}
         {tab === "teams" && <TeamsTab isAdmin={isAdmin} />}
         {tab === "clients" && <ClientsTab isAdmin={isAdmin} />}
         {tab === "services" && <ServicesTab isAdmin={isAdmin} />}

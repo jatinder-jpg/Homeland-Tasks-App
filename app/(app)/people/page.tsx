@@ -11,5 +11,10 @@ export default async function PeoplePage() {
     getOrgProjectsAction(),
   ]);
 
-  return <PeopleView members={members} orgProjects={orgProjects} />;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const viewerRole = members.find((m) => m.id === user?.id)?.role ?? "member";
+
+  return <PeopleView members={members} orgProjects={orgProjects} viewerId={user?.id ?? ""} viewerRole={viewerRole} />;
 }

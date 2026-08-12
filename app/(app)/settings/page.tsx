@@ -26,7 +26,8 @@ export default async function SettingsPage() {
       phone={profile.phone}
       email={user.email ?? ""}
       organization={profile.tp_organizations}
-      isAdmin={profile.role === "admin"}
+      isAdmin={profile.role === "admin" || profile.role === "super_admin"}
+      isSuperAdmin={profile.role === "super_admin"}
       storageUsageBytes={storageUsageBytes}
     />
   );

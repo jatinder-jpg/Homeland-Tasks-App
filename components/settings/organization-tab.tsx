@@ -13,10 +13,10 @@ type Organization = Database["public"]["Tables"]["tp_organizations"]["Row"];
 
 export function OrganizationTab({
   organization,
-  isAdmin,
+  isSuperAdmin,
 }: {
   organization: Organization;
-  isAdmin: boolean;
+  isSuperAdmin: boolean;
 }) {
   const [name, setName] = useState(organization.name);
   const [address, setAddress] = useState(organization.address ?? "");
@@ -70,17 +70,17 @@ export function OrganizationTab({
           <Input
             value={field.value}
             onChange={(e) => field.onChange(e.target.value)}
-            disabled={!isAdmin}
+            disabled={!isSuperAdmin}
           />
         </div>
       ))}
 
-      {isAdmin ? (
+      {isSuperAdmin ? (
         <Button onClick={handleSave} disabled={isPending}>
           {isPending ? "Saving…" : "Save changes"}
         </Button>
       ) : (
-        <p className="text-xs text-muted-foreground">Only workspace admins can edit organization details.</p>
+        <p className="text-xs text-muted-foreground">Only the super admin can edit organization details.</p>
       )}
     </Card>
   );

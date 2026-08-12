@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AvatarBadge } from "@/components/task/avatar-badge";
+import { ROLE_LABEL } from "@/lib/utils/roles";
 import type { MemberWithCounts } from "@/lib/queries/people";
 
 export function PeopleDirectory({
@@ -48,7 +49,7 @@ export function PeopleDirectory({
             <AvatarBadge name={member.full_name} />
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{member.full_name}</p>
-              <p className="truncate text-xs capitalize text-muted-foreground">{member.role}</p>
+              <p className="truncate text-xs text-muted-foreground">{ROLE_LABEL[member.role] ?? member.role}</p>
             </div>
           </button>
         ))}
