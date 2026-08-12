@@ -1,0 +1,51 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+export async function GET(request: NextRequest) {
+  const { searchParams, origin } = new URL(request.url);
+  const code = searchParams.get("code");
+  const next = searchParams.get("next") ?? "/dashboard";
+
+  if (!code) {
+    return NextResponse.redirect(`${origin}/sign-in`);
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+  let user = data.user;
+
+  if (error || !user) {
+    // The recovery/confirmation link can be hit twice in quick succession
+    // (email clients and browsers often prefetch links). If a concurrent
+    // request already exchanged the code and established a session, honor
+    // that instead of bouncing a legitimately-logged-in user to sign-in.
+    const {
+      data: { user: existingUser },
+    } = await supabase.auth.getUser();
+
+    if (!existingUser) {
+      return NextResponse.redirect(`${origin}/sign-in?error=confirmation_failed`);
+    }
+
+    user = existingUser;
+  }
+
+  const { data: existingProfile } = await supabase
+    .from("tp_profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!existingProfile) {
+    const fullName = (user.user_metadata?.full_name as string | undefined) ?? "Admin";
+    const orgName = (user.user_metadata?.org_name as string | undefined) ?? "My Workspace";
+
+    await supabase.rpc("tp_create_organization_and_admin", {
+      org_name: orgName,
+      admin_full_name: fullName,
+    });
+  }
+
+  return NextResponse.redirect(`${origin}${next}`);
+}
