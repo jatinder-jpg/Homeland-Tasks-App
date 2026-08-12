@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, Menu, Sparkles } from "lucide-react";
+import Image from "next/image";
+import { Menu, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { NotificationBell } from "@/components/shell/notification-bell";
@@ -34,10 +35,9 @@ export function TopBar({
         <Menu className="size-5" />
       </Button>
 
-      <Link href="/dashboard" className="flex items-center gap-1 text-lg font-bold">
-        <span>Task</span>
-        <CheckCircle2 className="size-5 text-primary" strokeWidth={2.5} />
-        <span>Pad</span>
+      <Link href="/dashboard" className="flex items-center gap-2 text-lg font-bold">
+        <Image src="/logo.png" alt="" width={28} height={28} className="size-7 shrink-0" />
+        <span className="hidden sm:inline">Homeland Tasks</span>
       </Link>
 
       <div className="flex flex-1 items-center justify-end gap-2">

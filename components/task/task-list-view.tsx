@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Filter, Plus, Search, SlidersHorizontal, MoreHorizontal, ListChecks, X } from "lucide-react";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -58,6 +60,17 @@ export function TaskListView({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [isBulkPending, setIsBulkPending] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState("");
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const quickFilter = searchParams.get("filter");
+
+  useEffect(() => {
+    if (quickFilter !== "assigned") return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? ""));
+  }, [quickFilter]);
 
   const source =
     view === "drafts"
@@ -67,11 +80,28 @@ export function TaskListView({
         : view === "recurring"
           ? recurringTasks
           : tasks;
+
+  const quickFilterLabel: Record<string, string> = {
+    assigned: "Assigned to me",
+    "due-today": "Due today",
+    overdue: "Past due",
+  };
+
+  const quickFiltered = useMemo(() => {
+    if (!quickFilter) return source;
+    const today = new Date().toISOString().slice(0, 10);
+    if (quickFilter === "assigned") return source.filter((t) => t.assignee_id === currentUserId);
+    if (quickFilter === "due-today") return source.filter((t) => t.due_date === today);
+    if (quickFilter === "overdue")
+      return source.filter((t) => t.due_date && t.due_date < today && t.status !== "done");
+    return source;
+  }, [source, quickFilter, currentUserId]);
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return source;
+    if (!search.trim()) return quickFiltered;
     const q = search.toLowerCase();
-    return source.filter((t) => t.name.toLowerCase().includes(q));
-  }, [source, search]);
+    return quickFiltered.filter((t) => t.name.toLowerCase().includes(q));
+  }, [quickFiltered, search]);
 
   const groups = useMemo(() => groupTasksForList(filtered), [filtered]);
 
@@ -255,6 +285,23 @@ export function TaskListView({
             <Plus className="size-4" />
             Add Task
           </Button>
+        </div>
+      )}
+
+      {quickFilter && quickFilterLabel[quickFilter] && (
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            <Filter className="size-3" />
+            {quickFilterLabel[quickFilter]}
+            <button
+              type="button"
+              onClick={() => router.push("/task")}
+              aria-label="Clear filter"
+              className="ml-0.5 rounded-full hover:bg-primary/20"
+            >
+              <X className="size-3" />
+            </button>
+          </span>
         </div>
       )}
 

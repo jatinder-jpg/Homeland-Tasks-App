@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TaskPad",
+  title: "Homeland Tasks",
   description: "Task and project management workspace",
 };
 

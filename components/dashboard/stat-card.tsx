@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
@@ -6,11 +7,13 @@ export function StatCard({
   label,
   value,
   tint,
+  href,
 }: {
   icon: LucideIcon;
   label: string;
   value: number;
   tint: "blue" | "green" | "amber" | "rose";
+  href?: string;
 }) {
   const tints: Record<typeof tint, string> = {
     blue: "bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400",
@@ -19,8 +22,10 @@ export function StatCard({
     rose: "bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-400",
   };
 
-  return (
-    <Card className="flex flex-row items-center gap-4 p-5">
+  const card = (
+    <Card
+      className={`flex flex-row items-center gap-4 p-5 ${href ? "transition-colors hover:border-primary/40 hover:ring-primary/20" : ""}`}
+    >
       <div className={`flex size-12 shrink-0 items-center justify-center rounded-xl ${tints[tint]}`}>
         <Icon className="size-6" />
       </div>
@@ -29,5 +34,13 @@ export function StatCard({
         <p className="text-2xl font-bold">{value}</p>
       </div>
     </Card>
+  );
+
+  if (!href) return card;
+
+  return (
+    <Link href={href} className="block">
+      {card}
+    </Link>
   );
 }

@@ -21,10 +21,10 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 p-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard icon={ListChecks} label="Total Task" value={counts.total} tint="blue" />
-        <StatCard icon={UserCheck} label="Assigned to me" value={counts.assignedToMe} tint="green" />
-        <StatCard icon={Clock} label="Due today" value={counts.dueToday} tint="amber" />
-        <StatCard icon={AlertTriangle} label="Past due tasks" value={counts.pastDue} tint="rose" />
+        <StatCard icon={ListChecks} label="Total Task" value={counts.total} tint="blue" href="/task" />
+        <StatCard icon={UserCheck} label="Assigned to me" value={counts.assignedToMe} tint="green" href="/task?filter=assigned" />
+        <StatCard icon={Clock} label="Due today" value={counts.dueToday} tint="amber" href="/task?filter=due-today" />
+        <StatCard icon={AlertTriangle} label="Past due tasks" value={counts.pastDue} tint="rose" href="/task?filter=overdue" />
       </div>
 
       <TodaysSummaryCard newTask={counts.newToday} closedTask={counts.closedToday} />

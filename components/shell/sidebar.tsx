@@ -5,11 +5,6 @@ import { usePathname } from "next/navigation";
 import { MessageSquareWarning } from "lucide-react";
 import { navItems } from "@/lib/nav-config";
 import { getInitials, colorForString } from "@/lib/utils/avatar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 export function Sidebar({
   orgName,
@@ -22,51 +17,47 @@ export function Sidebar({
 
   return (
     <aside
-      className={`flex w-16 shrink-0 flex-col items-center border-r bg-card py-4 transition-all ${open ? "" : "-ml-16"}`}
+      className={`flex w-56 shrink-0 flex-col border-r bg-card py-4 transition-all ${open ? "" : "-ml-56"}`}
     >
-      <span
-        className={`mb-4 flex size-9 items-center justify-center rounded-full text-sm font-semibold text-white ${colorForString(orgName)}`}
-        title={orgName}
-      >
-        {getInitials(orgName)}
-      </span>
+      <div className="mb-4 flex items-center gap-2 px-3">
+        <span
+          className={`flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${colorForString(orgName)}`}
+        >
+          {getInitials(orgName)}
+        </span>
+        <span className="truncate text-sm font-medium">{orgName}</span>
+      </div>
 
-      <nav className="flex flex-1 flex-col items-center gap-1">
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const Icon = item.icon;
           return (
-            <Tooltip key={item.href}>
-              <TooltipTrigger asChild>
-                <Link
-                  href={item.href}
-                  className={`flex size-10 items-center justify-center rounded-lg transition-colors ${
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="size-5" />
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">{item.label}</TooltipContent>
-            </Tooltip>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+              }`}
+            >
+              <Icon className="size-5 shrink-0" />
+              {item.label}
+            </Link>
           );
         })}
       </nav>
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            className="flex size-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
-            aria-label="Send feedback"
-          >
-            <MessageSquareWarning className="size-5" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="right">Feedback</TooltipContent>
-      </Tooltip>
+      <div className="px-3">
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <MessageSquareWarning className="size-5 shrink-0" />
+          Feedback
+        </button>
+      </div>
     </aside>
   );
 }

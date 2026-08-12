@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { CheckCircle2 } from "lucide-react";
+import Image from "next/image";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-1 flex-col bg-muted/40">
       <div className="flex flex-1 flex-col items-center justify-center px-4 py-12">
-        <Link href="/" className="mb-8 flex items-center gap-1.5 text-2xl font-bold">
-          <span>Task</span>
-          <CheckCircle2 className="size-6 text-primary" strokeWidth={2.5} />
-          <span>Pad</span>
+        <Link href="/" className="mb-8 flex items-center gap-2 text-2xl font-bold">
+          <Image src="/logo.png" alt="" width={32} height={32} className="size-8" />
+          <span>Homeland Tasks</span>
         </Link>
         <div className="w-full max-w-md rounded-xl border bg-card p-8 shadow-sm">
           {children}
