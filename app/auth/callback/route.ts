@@ -39,12 +39,17 @@ export async function GET(request: NextRequest) {
 
   if (!existingProfile) {
     const fullName = (user.user_metadata?.full_name as string | undefined) ?? "Admin";
-    const orgName = (user.user_metadata?.org_name as string | undefined) ?? "My Workspace";
+    const joinOrgCode = user.user_metadata?.join_org_code as string | undefined;
 
-    await supabase.rpc("tp_create_organization_and_admin", {
-      org_name: orgName,
-      admin_full_name: fullName,
-    });
+    if (joinOrgCode) {
+      await supabase.rpc("tp_join_organization", { org_code: joinOrgCode, member_full_name: fullName });
+    } else {
+      const orgName = (user.user_metadata?.org_name as string | undefined) ?? "My Workspace";
+      await supabase.rpc("tp_create_organization_and_admin", {
+        org_name: orgName,
+        admin_full_name: fullName,
+      });
+    }
   }
 
   return NextResponse.redirect(`${origin}${next}`);

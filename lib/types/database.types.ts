@@ -1384,6 +1384,14 @@ export type Database = {
         Args: { admin_full_name: string; org_name: string }
         Returns: string
       }
+      tp_join_organization: {
+        Args: { member_full_name: string; org_code: string }
+        Returns: string
+      }
+      tp_lookup_org_name_by_code: {
+        Args: { p_code: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

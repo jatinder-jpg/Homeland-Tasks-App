@@ -11,12 +11,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const schema = z.object({
-  fullName: z.string().min(1, "Your name is required"),
-  orgName: z.string().min(1, "Company/workspace name is required"),
-  email: z.string().email("Enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
+const schema = z
+  .object({
+    fullName: z.string().min(1, "Your name is required"),
+    mode: z.enum(["create", "join"]),
+    orgName: z.string().optional(),
+    orgCode: z.string().optional(),
+    email: z.string().email("Enter a valid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.mode === "create" && !data.orgName?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Company/workspace name is required", path: ["orgName"] });
+    }
+    if (data.mode === "join" && !data.orgCode?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Organization code is required", path: ["orgCode"] });
+    }
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -28,14 +39,20 @@ export function SignUpForm() {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { mode: "create" } });
+
+  const mode = watch("mode");
 
   const onSubmit = (values: FormValues) => {
     setServerError(null);
     const formData = new FormData();
     formData.set("fullName", values.fullName);
-    formData.set("orgName", values.orgName);
+    formData.set("mode", values.mode);
+    formData.set("orgName", values.orgName ?? "");
+    formData.set("orgCode", values.orgCode ?? "");
     formData.set("email", values.email);
     formData.set("password", values.password);
 
@@ -82,12 +99,49 @@ export function SignUpForm() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="orgName">Company / workspace name</Label>
-          <Input id="orgName" placeholder="Acme Inc." {...register("orgName")} />
-          {errors.orgName && (
-            <p className="text-xs text-destructive">{errors.orgName.message}</p>
-          )}
+          <Label>Workspace</Label>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={mode === "create" ? "default" : "outline"}
+              size="sm"
+              className="flex-1"
+              onClick={() => setValue("mode", "create")}
+            >
+              Create new
+            </Button>
+            <Button
+              type="button"
+              variant={mode === "join" ? "default" : "outline"}
+              size="sm"
+              className="flex-1"
+              onClick={() => setValue("mode", "join")}
+            >
+              Join existing
+            </Button>
+          </div>
         </div>
+
+        {mode === "create" ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="orgName">Company / workspace name</Label>
+            <Input id="orgName" placeholder="Acme Inc." {...register("orgName")} />
+            {errors.orgName && (
+              <p className="text-xs text-destructive">{errors.orgName.message}</p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <Label htmlFor="orgCode">Organization code</Label>
+            <Input id="orgCode" placeholder="T-62850" {...register("orgCode")} />
+            <p className="text-xs text-muted-foreground">
+              Ask your workspace admin for this — it's shown in their Settings → Organization tab.
+            </p>
+            {errors.orgCode && (
+              <p className="text-xs text-destructive">{errors.orgCode.message}</p>
+            )}
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
