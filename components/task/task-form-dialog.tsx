@@ -5,7 +5,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { X, Search } from "lucide-react";
+import { X, Search, TriangleAlert } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,7 @@ import {
   createTaskAction,
   updateTaskAction,
   archiveTaskAction,
+  sendUrgentAlertAction,
   getTaskDetailAction,
   addSubtaskAction,
   toggleSubtaskAction,
@@ -46,6 +47,7 @@ import {
   deleteChecklistItemAction,
   type WorkflowStatus,
 } from "@/lib/actions/tasks";
+import { createClient } from "@/lib/supabase/client";
 import { getOrgDepartmentsAction, getDepartmentMembersAction } from "@/lib/actions/departments";
 import { getOrgCustomFieldsAction } from "@/lib/actions/custom-fields";
 import type { TaskWithAssignee, TaskSubtask, TaskChecklistItem } from "@/lib/queries/tasks";
@@ -132,6 +134,7 @@ export function TaskFormDialog({
   onSaved?: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [currentUserId, setCurrentUserId] = useState("");
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [departmentRoster, setDepartmentRoster] = useState<string[] | null>(null);
   const [assigneeSearch, setAssigneeSearch] = useState("");
@@ -202,6 +205,8 @@ export function TaskFormDialog({
     if (!open) return;
     getOrgDepartmentsAction().then(setDepartments);
     getOrgCustomFieldsAction().then(setCustomFields);
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? ""));
   }, [open]);
 
   useEffect(() => {
@@ -393,6 +398,18 @@ export function TaskFormDialog({
       toast.success(task.is_archived ? "Task unarchived" : "Task archived");
       onOpenChange(false);
       onSaved?.();
+    });
+  }
+
+  function handleSendAlert() {
+    if (!task) return;
+    startTransition(async () => {
+      const result = await sendUrgentAlertAction(task.id);
+      if (result && "error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Alert sent to the task creator");
     });
   }
 
@@ -952,16 +969,29 @@ export function TaskFormDialog({
         </div>
 
         <DialogFooter className="sm:justify-between">
-          {task && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleArchiveToggle}
-              disabled={isPending}
-            >
-              {task.is_archived ? "Unarchive" : "Archive"}
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {task && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleArchiveToggle}
+                disabled={isPending}
+              >
+                {task.is_archived ? "Unarchive" : "Archive"}
+              </Button>
+            )}
+            {task && task.created_by !== currentUserId && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleSendAlert}
+                disabled={isPending}
+              >
+                <TriangleAlert className="size-4" />
+                Alert Creator
+              </Button>
+            )}
+          </div>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel

@@ -6,7 +6,13 @@ export type CreateNotificationInput = {
   organizationId: string;
   recipientId: string;
   actorId: string | null;
-  type: "task_assigned" | "project_assigned" | "discussion_message" | "folder_shared" | "file_shared";
+  type:
+    | "task_assigned"
+    | "project_assigned"
+    | "discussion_message"
+    | "folder_shared"
+    | "file_shared"
+    | "task_urgent_alert";
   title: string;
   body?: string;
   link?: string;

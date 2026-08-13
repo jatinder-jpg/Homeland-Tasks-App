@@ -516,6 +516,41 @@ export async function archiveTaskAction(taskId: string, archived: boolean) {
   return { success: true };
 }
 
+export async function sendUrgentAlertAction(taskId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: task } = await supabase
+    .from("tp_tasks")
+    .select("name, organization_id, created_by")
+    .eq("id", taskId)
+    .single();
+  if (!task) return { error: "Task not found" };
+  if (!task.created_by) return { error: "This task has no creator to alert" };
+  if (task.created_by === user.id) return { error: "You created this task" };
+
+  const { data: actorProfile } = await supabase
+    .from("tp_profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single();
+
+  await createNotification({
+    organizationId: task.organization_id,
+    recipientId: task.created_by,
+    actorId: user.id,
+    type: "task_urgent_alert",
+    title: `${actorProfile?.full_name ?? "Someone"} needs your urgent approval`,
+    body: task.name,
+    link: "/task",
+  });
+
+  return { success: true };
+}
+
 export async function deleteTaskAction(taskId: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("tp_tasks").delete().eq("id", taskId);

@@ -2,10 +2,20 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { createClient } from "@/lib/supabase/client";
 import {
   markAllNotificationsReadAction,
@@ -35,6 +45,7 @@ export function NotificationBell({
   const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const [notifications, setNotifications] = useState(initialNotifications);
+  const [urgentAlert, setUrgentAlert] = useState<NotificationWithActor | null>(null);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -53,6 +64,9 @@ export function NotificationBell({
           const row = payload.new as NotificationWithActor;
           setNotifications((prev) => [{ ...row, actor: null }, ...prev].slice(0, 10));
           setUnreadCount((prev) => prev + 1);
+          if (row.type === "task_urgent_alert") {
+            setUrgentAlert(row);
+          }
         },
       )
       .subscribe();
@@ -61,6 +75,25 @@ export function NotificationBell({
       supabase.removeChannel(channel);
     };
   }, [userId]);
+
+  function dismissUrgentAlert() {
+    if (!urgentAlert) return;
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === urgentAlert.id ? { ...n, is_read: true } : n)),
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+    startTransition(() => {
+      markNotificationReadAction(urgentAlert.id);
+    });
+    setUrgentAlert(null);
+  }
+
+  function viewUrgentAlertTask() {
+    if (!urgentAlert) return;
+    const link = urgentAlert.link;
+    dismissUrgentAlert();
+    if (link) router.push(link);
+  }
 
   function handleNotificationClick(notification: NotificationWithActor) {
     if (!notification.is_read) {
@@ -84,6 +117,7 @@ export function NotificationBell({
   }
 
   return (
+    <>
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
@@ -134,5 +168,30 @@ export function NotificationBell({
         </ScrollArea>
       </PopoverContent>
     </Popover>
+
+      <AlertDialog open={Boolean(urgentAlert)} onOpenChange={(open) => !open && dismissUrgentAlert()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <TriangleAlert className="size-5" />
+              Urgent approval needed
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {urgentAlert?.title}
+              {urgentAlert?.body && (
+                <>
+                  <br />
+                  <span className="font-medium text-foreground">{urgentAlert.body}</span>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={dismissUrgentAlert}>Dismiss</AlertDialogCancel>
+            <AlertDialogAction onClick={viewUrgentAlertTask}>View Task</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
