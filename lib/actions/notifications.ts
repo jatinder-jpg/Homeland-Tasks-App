@@ -12,7 +12,8 @@ export type CreateNotificationInput = {
     | "discussion_message"
     | "folder_shared"
     | "file_shared"
-    | "task_urgent_alert";
+    | "task_urgent_alert"
+    | "task_review_requested";
   title: string;
   body?: string;
   link?: string;

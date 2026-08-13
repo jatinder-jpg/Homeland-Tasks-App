@@ -153,6 +153,7 @@ export function TaskFormDialog({
     reset,
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -346,31 +347,35 @@ export function TaskFormDialog({
     });
   }
 
+  function buildTaskInput(values: FormValues) {
+    return {
+      name: values.name,
+      description: values.description || undefined,
+      priority: values.priority,
+      dueDate: values.dueDate || null,
+      assigneeIds: values.assigneeIds,
+      projectId: values.projectId || null,
+      siteVisit: values.siteVisit,
+      isPinned: values.isPinned,
+      isDraft: values.isDraft,
+      departmentId: values.departmentId || null,
+      progress: values.progress,
+      remindAt: values.reminderEnabled && values.remindAt ? new Date(values.remindAt).toISOString() : null,
+      workflowStatus: values.workflowStatus,
+      subtasksMandatory: values.subtasksMandatory,
+      checklistMandatory: values.checklistMandatory,
+      followerIds: values.followerIds,
+      customFieldValues,
+      isRecurring: values.recurringEnabled,
+      recurrenceFrequency: values.recurringEnabled ? values.recurrenceFrequency : null,
+      recurrenceInterval: values.recurrenceInterval,
+      recurrenceEndDate: values.recurringEnabled && values.recurrenceEndDate ? values.recurrenceEndDate : null,
+    };
+  }
+
   const onSubmit = (values: FormValues) => {
     startTransition(async () => {
-      const input = {
-        name: values.name,
-        description: values.description || undefined,
-        priority: values.priority,
-        dueDate: values.dueDate || null,
-        assigneeIds: values.assigneeIds,
-        projectId: values.projectId || null,
-        siteVisit: values.siteVisit,
-        isPinned: values.isPinned,
-        isDraft: values.isDraft,
-        departmentId: values.departmentId || null,
-        progress: values.progress,
-        remindAt: values.reminderEnabled && values.remindAt ? new Date(values.remindAt).toISOString() : null,
-        workflowStatus: values.workflowStatus,
-        subtasksMandatory: values.subtasksMandatory,
-        checklistMandatory: values.checklistMandatory,
-        followerIds: values.followerIds,
-        customFieldValues,
-        isRecurring: values.recurringEnabled,
-        recurrenceFrequency: values.recurringEnabled ? values.recurrenceFrequency : null,
-        recurrenceInterval: values.recurrenceInterval,
-        recurrenceEndDate: values.recurringEnabled && values.recurrenceEndDate ? values.recurrenceEndDate : null,
-      };
+      const input = buildTaskInput(values);
 
       const result = task
         ? await updateTaskAction(task.id, input)
@@ -386,6 +391,24 @@ export function TaskFormDialog({
       onSaved?.();
     });
   };
+
+  function handleClose() {
+    if (!task) {
+      const values = getValues();
+      if (values.name.trim()) {
+        const input = buildTaskInput({ ...values, isDraft: true });
+        createTaskAction(input).then((result) => {
+          if (result && "error" in result) {
+            toast.error(result.error);
+            return;
+          }
+          toast.success("Saved as draft");
+          onSaved?.();
+        });
+      }
+    }
+    onOpenChange(false);
+  }
 
   function handleArchiveToggle() {
     if (!task) return;
@@ -414,7 +437,7 @@ export function TaskFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(next) => { if (!next) handleClose(); }}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{task ? "Edit Task" : "Add Task"}</DialogTitle>
@@ -993,7 +1016,7 @@ export function TaskFormDialog({
             )}
           </div>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
             <Button

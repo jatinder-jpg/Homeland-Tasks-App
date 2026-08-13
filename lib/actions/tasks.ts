@@ -391,11 +391,52 @@ export async function toggleTaskCompleteAction(taskId: string, done: boolean) {
     }
   }
 
+  const isCreatorClosing = done && task && task.created_by === user?.id;
+
+  // Someone other than the creator ticking a task doesn't finish it outright —
+  // it goes to the creator for review instead of silently completing.
+  if (done && task && !isCreatorClosing) {
+    const { error } = await supabase
+      .from("tp_tasks")
+      .update({ workflow_status: "under_review", updated_at: new Date().toISOString() })
+      .eq("id", taskId);
+    if (error) return { error: error.message };
+
+    await logTaskActivity(supabase, {
+      taskId,
+      actorId: user?.id ?? null,
+      action: "status_changed",
+      detail: "Marked as under review",
+    });
+
+    if (task.created_by && task.created_by !== user?.id) {
+      const { data: actorProfile } = await supabase
+        .from("tp_profiles")
+        .select("full_name")
+        .eq("id", user?.id ?? "")
+        .single();
+
+      await createNotification({
+        organizationId: task.organization_id,
+        recipientId: task.created_by,
+        actorId: user?.id ?? null,
+        type: "task_review_requested",
+        title: `${actorProfile?.full_name ?? "Someone"} marked a task ready for your review`,
+        body: task.name,
+        link: "/task",
+      });
+    }
+
+    revalidateTaskViews();
+    return { success: true };
+  }
+
   const { error } = await supabase
     .from("tp_tasks")
     .update({
       status: done ? "done" : "open",
       completed_at: done ? new Date().toISOString() : null,
+      ...(isCreatorClosing && { is_archived: true, archived_at: new Date().toISOString() }),
       updated_at: new Date().toISOString(),
     })
     .eq("id", taskId);
@@ -411,6 +452,10 @@ export async function toggleTaskCompleteAction(taskId: string, done: boolean) {
     actorId: user?.id ?? null,
     action: done ? "completed" : "reopened",
   });
+
+  if (isCreatorClosing) {
+    await logTaskActivity(supabase, { taskId, actorId: user?.id ?? null, action: "archived" });
+  }
 
   revalidateTaskViews();
   return { success: true };
