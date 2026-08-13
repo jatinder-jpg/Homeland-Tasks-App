@@ -51,7 +51,22 @@ export function KanbanCard({
         ) : (
           <span />
         )}
-        <AvatarBadge name={task.assignee?.full_name ?? null} />
+        {task.assignees.length === 0 ? (
+          <AvatarBadge name={null} />
+        ) : (
+          <div className="flex shrink-0 -space-x-2">
+            {task.assignees.slice(0, 3).map((a) => (
+              <div key={a.id} className="ring-2 ring-card rounded-full">
+                <AvatarBadge name={a.full_name} />
+              </div>
+            ))}
+            {task.assignees.length > 3 && (
+              <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground ring-2 ring-card">
+                +{task.assignees.length - 3}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

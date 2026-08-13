@@ -20,20 +20,19 @@ export async function getOrgMembers(
   const { data: profiles, error } = await query;
   if (error) throw error;
 
-  const { data: tasks } = await supabase
-    .from("tp_tasks")
-    .select("assignee_id, status")
-    .eq("is_draft", false)
-    .eq("is_archived", false);
+  const { data: assigneeRows } = await supabase
+    .from("tp_task_assignees")
+    .select("profile_id, task:tp_tasks!inner(status, is_draft, is_archived)")
+    .eq("task.is_draft", false)
+    .eq("task.is_archived", false);
 
   const counts = new Map<string, { total: number; completed: number; incomplete: number }>();
-  for (const task of tasks ?? []) {
-    if (!task.assignee_id) continue;
-    const bucket = counts.get(task.assignee_id) ?? { total: 0, completed: 0, incomplete: 0 };
+  for (const row of (assigneeRows ?? []) as unknown as { profile_id: string; task: { status: string } }[]) {
+    const bucket = counts.get(row.profile_id) ?? { total: 0, completed: 0, incomplete: 0 };
     bucket.total += 1;
-    if (task.status === "done") bucket.completed += 1;
+    if (row.task.status === "done") bucket.completed += 1;
     else bucket.incomplete += 1;
-    counts.set(task.assignee_id, bucket);
+    counts.set(row.profile_id, bucket);
   }
 
   return (profiles ?? []).map((profile) => {
@@ -54,18 +53,19 @@ export async function getPriorityBreakdown(
   opts: { assigneeId: string },
 ): Promise<PriorityBreakdown[]> {
   const { data, error } = await supabase
-    .from("tp_tasks")
-    .select("priority")
-    .eq("assignee_id", opts.assigneeId)
-    .eq("is_draft", false)
-    .eq("is_archived", false);
+    .from("tp_task_assignees")
+    .select("task:tp_tasks!inner(priority, is_draft, is_archived)")
+    .eq("profile_id", opts.assigneeId)
+    .eq("task.is_draft", false)
+    .eq("task.is_archived", false);
 
   if (error) throw error;
 
   const counts = { high: 0, medium: 0, low: 0 };
-  for (const row of data ?? []) {
-    if (row.priority === "high" || row.priority === "medium" || row.priority === "low") {
-      counts[row.priority] += 1;
+  for (const row of (data ?? []) as unknown as { task: { priority: string } }[]) {
+    const priority = row.task.priority;
+    if (priority === "high" || priority === "medium" || priority === "low") {
+      counts[priority] += 1;
     }
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { CheckCircle2, Circle, Pin, Flag, MapPin, Repeat } from "lucide-react";
+import { CheckCircle2, Circle, Pin, Flag, MapPin, Repeat, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { toggleTaskCompleteAction, togglePinAction } from "@/lib/actions/tasks";
 import { AvatarBadge } from "@/components/task/avatar-badge";
@@ -13,6 +13,24 @@ const PRIORITY_COLOR: Record<string, string> = {
   high: "text-red-500 fill-red-500",
   medium: "text-amber-500 fill-amber-500",
   low: "text-emerald-500 fill-emerald-500",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: "Pending",
+  approval_awaiting: "Approval Awaiting",
+  in_progress: "In Progress",
+  on_hold: "On Hold",
+  third_party_pending: "Third Party Pending",
+  under_review: "Under Review",
+};
+
+const STATUS_COLOR: Record<string, string> = {
+  pending: "bg-amber-500",
+  approval_awaiting: "bg-rose-700",
+  in_progress: "bg-fuchsia-700",
+  on_hold: "bg-violet-600",
+  third_party_pending: "bg-pink-500",
+  under_review: "bg-blue-500",
 };
 
 export function TaskRow({
@@ -88,19 +106,52 @@ export function TaskRow({
         {task.name}
       </span>
 
-      {task.team && (
+      {task.department && (
         <span className="hidden shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground sm:inline">
-          {task.team.name}
+          {task.department.name}
         </span>
       )}
+
+      {task.workflow_status && (
+        <span className="hidden shrink-0 items-center gap-1.5 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground sm:inline-flex">
+          <span className={`size-1.5 shrink-0 rounded-full ${STATUS_COLOR[task.workflow_status] ?? "bg-muted-foreground"}`} />
+          {STATUS_LABEL[task.workflow_status] ?? task.workflow_status}
+        </span>
+      )}
+
+      {task.assignees.length === 0 ? (
+        <AvatarBadge name={null} />
+      ) : (
+        <div className="flex shrink-0 -space-x-2">
+          {task.assignees.slice(0, 3).map((a) => (
+            <div key={a.id} className="ring-2 ring-card rounded-full">
+              <AvatarBadge name={a.full_name} />
+            </div>
+          ))}
+          {task.assignees.length > 3 && (
+            <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground ring-2 ring-card">
+              +{task.assignees.length - 3}
+            </span>
+          )}
+        </div>
+      )}
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+        aria-label="Comments"
+        className="shrink-0 text-muted-foreground/60 hover:text-foreground"
+      >
+        <MessageSquare className="size-4" />
+      </button>
 
       {task.due_date && (
         <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
           {formatShortDate(new Date(task.due_date + "T00:00:00"))}
         </span>
       )}
-
-      <AvatarBadge name={task.assignee?.full_name ?? null} />
     </div>
   );
 }

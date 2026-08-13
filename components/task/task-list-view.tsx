@@ -90,7 +90,8 @@ export function TaskListView({
   const quickFiltered = useMemo(() => {
     if (!quickFilter) return source;
     const today = new Date().toISOString().slice(0, 10);
-    if (quickFilter === "assigned") return source.filter((t) => t.assignee_id === currentUserId);
+    if (quickFilter === "assigned")
+      return source.filter((t) => t.assignees.some((a) => a.id === currentUserId));
     if (quickFilter === "due-today") return source.filter((t) => t.due_date === today);
     if (quickFilter === "overdue")
       return source.filter((t) => t.due_date && t.due_date < today && t.status !== "done");

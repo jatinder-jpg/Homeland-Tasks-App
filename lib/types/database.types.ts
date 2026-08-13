@@ -945,7 +945,7 @@ export type Database = {
           site_visit: boolean
           status: string
           subtasks_mandatory: boolean
-          team_id: string | null
+          department_id: string | null
           updated_at: string
           workflow_status: string
         }
@@ -980,7 +980,7 @@ export type Database = {
           site_visit?: boolean
           status?: string
           subtasks_mandatory?: boolean
-          team_id?: string | null
+          department_id?: string | null
           updated_at?: string
           workflow_status?: string
         }
@@ -1015,7 +1015,7 @@ export type Database = {
           site_visit?: boolean
           status?: string
           subtasks_mandatory?: boolean
-          team_id?: string | null
+          department_id?: string | null
           updated_at?: string
           workflow_status?: string
         }
@@ -1077,10 +1077,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "tp_tasks_team_id_fkey"
-            columns: ["team_id"]
+            foreignKeyName: "tp_tasks_department_id_fkey"
+            columns: ["department_id"]
             isOneToOne: false
-            referencedRelation: "tp_teams"
+            referencedRelation: "tp_departments"
             referencedColumns: ["id"]
           },
         ]
@@ -1212,6 +1212,39 @@ export type Database = {
           },
         ]
       }
+      tp_task_assignees: {
+        Row: {
+          created_at: string
+          profile_id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          profile_id: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          profile_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tp_task_assignees_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "tp_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tp_task_assignees_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tp_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tp_task_followers: {
         Row: {
           created_at: string
@@ -1330,7 +1363,7 @@ export type Database = {
           },
         ]
       }
-      tp_teams: {
+      tp_departments: {
         Row: {
           created_at: string
           id: string
@@ -1351,10 +1384,43 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "tp_teams_organization_id_fkey"
+            foreignKeyName: "tp_departments_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "tp_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tp_department_members: {
+        Row: {
+          created_at: string
+          department_id: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tp_department_members_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "tp_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tp_department_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "tp_profiles"
             referencedColumns: ["id"]
           },
         ]

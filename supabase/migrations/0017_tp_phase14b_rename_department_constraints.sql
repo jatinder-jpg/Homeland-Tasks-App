@@ -1,0 +1,2 @@
+alter table tp_tasks rename constraint tp_tasks_team_id_fkey to tp_tasks_department_id_fkey;
+alter table tp_departments rename constraint tp_teams_organization_id_fkey to tp_departments_organization_id_fkey;

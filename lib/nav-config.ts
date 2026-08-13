@@ -26,6 +26,6 @@ export const navItems: NavItem[] = [
   { href: "/documents", label: "Documents", icon: FolderOpen, available: true },
   { href: "/notes", label: "Notes", icon: NotebookText, available: true },
   { href: "/reports", label: "Reports", icon: BarChart3, available: true },
-  { href: "/people", label: "People", icon: Users, available: true },
+  { href: "/people", label: "Users", icon: Users, available: true },
   { href: "/settings", label: "Settings", icon: Settings, available: true },
 ];

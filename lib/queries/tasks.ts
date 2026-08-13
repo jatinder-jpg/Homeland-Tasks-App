@@ -3,7 +3,8 @@ import type { Database } from "@/lib/types/database.types";
 
 export type TaskWithAssignee = Database["public"]["Tables"]["tp_tasks"]["Row"] & {
   assignee: { id: string; full_name: string } | null;
-  team: { id: string; name: string } | null;
+  assignees: { id: string; full_name: string }[];
+  department: { id: string; name: string } | null;
   client: { id: string; name: string } | null;
   service: { id: string; name: string } | null;
 };
@@ -20,6 +21,27 @@ export type TaskDetail = TaskWithAssignee & {
   customFieldValues: Record<string, string>;
 };
 
+async function getAssigneesForTasks(
+  supabase: SupabaseClient<Database>,
+  taskIds: string[],
+): Promise<Map<string, { id: string; full_name: string }[]>> {
+  const map = new Map<string, { id: string; full_name: string }[]>();
+  if (taskIds.length === 0) return map;
+
+  const { data } = await supabase
+    .from("tp_task_assignees")
+    .select("task_id, profile:tp_profiles(id, full_name)")
+    .in("task_id", taskIds);
+
+  for (const row of (data ?? []) as unknown as { task_id: string; profile: { id: string; full_name: string } | null }[]) {
+    if (!row.profile) continue;
+    const list = map.get(row.task_id) ?? [];
+    list.push(row.profile);
+    map.set(row.task_id, list);
+  }
+  return map;
+}
+
 export async function getTasks(
   supabase: SupabaseClient<Database>,
   opts: {
@@ -33,7 +55,7 @@ export async function getTasks(
   let query = supabase
     .from("tp_tasks")
     .select(
-      "*, assignee:tp_profiles!tp_tasks_assignee_id_fkey(id, full_name), team:tp_teams(id, name), client:tp_clients(id, name), service:tp_services(id, name)",
+      "*, assignee:tp_profiles!tp_tasks_assignee_id_fkey(id, full_name), department:tp_departments(id, name), client:tp_clients(id, name), service:tp_services(id, name)",
     )
     .order("position", { ascending: true })
     .order("created_at", { ascending: false });
@@ -56,7 +78,10 @@ export async function getTasks(
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []) as unknown as TaskWithAssignee[];
+  const tasks = (data ?? []) as unknown as TaskWithAssignee[];
+
+  const assigneesByTask = await getAssigneesForTasks(supabase, tasks.map((t) => t.id));
+  return tasks.map((t) => ({ ...t, assignees: assigneesByTask.get(t.id) ?? [] }));
 }
 
 export async function getTaskDetail(
@@ -65,6 +90,7 @@ export async function getTaskDetail(
 ): Promise<TaskDetail | null> {
   const [
     { data: task, error: taskError },
+    { data: assignees },
     { data: followers },
     { data: subtasks },
     { data: checklist },
@@ -73,10 +99,11 @@ export async function getTaskDetail(
     supabase
       .from("tp_tasks")
       .select(
-        "*, assignee:tp_profiles!tp_tasks_assignee_id_fkey(id, full_name), team:tp_teams(id, name), client:tp_clients(id, name), service:tp_services(id, name)",
+        "*, assignee:tp_profiles!tp_tasks_assignee_id_fkey(id, full_name), department:tp_departments(id, name), client:tp_clients(id, name), service:tp_services(id, name)",
       )
       .eq("id", taskId)
       .single(),
+    supabase.from("tp_task_assignees").select("profile:tp_profiles(id, full_name)").eq("task_id", taskId),
     supabase.from("tp_task_followers").select("profile:tp_profiles(id, full_name)").eq("task_id", taskId),
     supabase
       .from("tp_task_subtasks")
@@ -100,6 +127,9 @@ export async function getTaskDetail(
 
   return {
     ...(task as unknown as TaskWithAssignee),
+    assignees: ((assignees ?? []) as unknown as { profile: { id: string; full_name: string } }[]).map(
+      (a) => a.profile,
+    ),
     followers: ((followers ?? []) as unknown as { profile: { id: string; full_name: string } }[]).map(
       (f) => f.profile,
     ),

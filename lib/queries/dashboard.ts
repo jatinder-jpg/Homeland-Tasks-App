@@ -29,10 +29,10 @@ export async function getDashboardCounts(
       .eq("is_archived", false),
     supabase
       .from("tp_tasks")
-      .select("id", { count: "exact", head: true })
+      .select("id, tp_task_assignees!inner(profile_id)", { count: "exact", head: true })
       .eq("is_draft", false)
       .eq("is_archived", false)
-      .eq("assignee_id", userId),
+      .eq("tp_task_assignees.profile_id", userId),
     supabase
       .from("tp_tasks")
       .select("id", { count: "exact", head: true })
@@ -82,18 +82,22 @@ export async function getStatistics(
   supabase: SupabaseClient<Database>,
   opts: { scope: "all" | "mine"; range: "monthly" | "weekly"; userId: string },
 ): Promise<MonthlyStatRow[]> {
-  let query = supabase
-    .from("tp_tasks")
-    .select("due_date, completed_at, created_at, status")
-    .eq("is_draft", false)
-    .eq("is_archived", false);
+  const selectCols =
+    opts.scope === "mine"
+      ? "due_date, completed_at, created_at, status, tp_task_assignees!inner(profile_id)"
+      : "due_date, completed_at, created_at, status";
+
+  let query = supabase.from("tp_tasks").select(selectCols).eq("is_draft", false).eq("is_archived", false);
 
   if (opts.scope === "mine") {
-    query = query.eq("assignee_id", opts.userId);
+    query = query.eq("tp_task_assignees.profile_id", opts.userId);
   }
 
   const { data } = await query;
-  return aggregate(data ?? [], opts.range);
+  return aggregate(
+    (data ?? []) as unknown as { due_date: string | null; completed_at: string | null; created_at: string; status: string }[],
+    opts.range,
+  );
 }
 
 function aggregate(

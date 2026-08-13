@@ -5,7 +5,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X, Search } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -45,9 +46,7 @@ import {
   deleteChecklistItemAction,
   type WorkflowStatus,
 } from "@/lib/actions/tasks";
-import { getOrgTeamsAction } from "@/lib/actions/teams";
-import { getOrgClientsAction } from "@/lib/actions/clients";
-import { getOrgServicesAction } from "@/lib/actions/services";
+import { getOrgDepartmentsAction, getDepartmentMembersAction } from "@/lib/actions/departments";
 import { getOrgCustomFieldsAction } from "@/lib/actions/custom-fields";
 import type { TaskWithAssignee, TaskSubtask, TaskChecklistItem } from "@/lib/queries/tasks";
 import type { CustomFieldDef } from "@/lib/queries/custom-fields";
@@ -70,16 +69,15 @@ function toDatetimeLocalValue(iso: string) {
 const schema = z
   .object({
     name: z.string().min(1, "Task name is required"),
+    description: z.string().optional(),
     priority: z.enum(["low", "medium", "high"]),
     dueDate: z.string().optional(),
-    assigneeId: z.string().optional(),
+    assigneeIds: z.array(z.string()),
     projectId: z.string().optional(),
     siteVisit: z.boolean(),
     isPinned: z.boolean(),
     isDraft: z.boolean(),
-    teamId: z.string().optional(),
-    clientId: z.string().optional(),
-    serviceId: z.string().optional(),
+    departmentId: z.string().optional(),
     progress: z.number().min(0).max(100),
     reminderEnabled: z.boolean(),
     remindAt: z.string().optional(),
@@ -102,6 +100,13 @@ const schema = z
   .superRefine((data, ctx) => {
     if (!data.isDraft && !data.projectId) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Project is required", path: ["projectId"] });
+    }
+    if (data.departmentId && data.assigneeIds.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least one POC is required when a department is selected",
+        path: ["assigneeIds"],
+      });
     }
   });
 
@@ -127,9 +132,10 @@ export function TaskFormDialog({
   onSaved?: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
-  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
-  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
-  const [services, setServices] = useState<{ id: string; name: string }[]>([]);
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [departmentRoster, setDepartmentRoster] = useState<string[] | null>(null);
+  const [assigneeSearch, setAssigneeSearch] = useState("");
+  const [followerSearch, setFollowerSearch] = useState("");
   const [customFields, setCustomFields] = useState<CustomFieldDef[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>([]);
@@ -143,21 +149,21 @@ export function TaskFormDialog({
     control,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: "",
+      description: "",
       priority: "medium",
       dueDate: "",
-      assigneeId: "",
+      assigneeIds: [],
       projectId: "",
       siteVisit: false,
       isPinned: false,
       isDraft: false,
-      teamId: "",
-      clientId: "",
-      serviceId: "",
+      departmentId: "",
       progress: 0,
       reminderEnabled: false,
       remindAt: "",
@@ -177,34 +183,57 @@ export function TaskFormDialog({
   const reminderEnabled = watch("reminderEnabled");
   const recurringEnabled = watch("recurringEnabled");
   const followerIds = watch("followerIds");
-  const assigneeIdValue = watch("assigneeId");
+  const assigneeIdsValue = watch("assigneeIds");
+  const departmentIdValue = watch("departmentId");
   const noProjectsAvailable = projects.length === 0;
   const [sidePanelTab, setSidePanelTab] = useState("comment");
-  const relevantProfileIds = [assigneeIdValue, ...followerIds].filter((id): id is string => Boolean(id));
+  const relevantProfileIds = [...assigneeIdsValue, ...followerIds];
+  const assignableMembers = departmentIdValue
+    ? members.filter((m) => (departmentRoster ?? []).includes(m.id))
+    : members;
+  const filteredAssignableMembers = assignableMembers.filter((m) =>
+    m.full_name.toLowerCase().includes(assigneeSearch.trim().toLowerCase()),
+  );
+  const filteredFollowerMembers = members.filter((m) =>
+    m.full_name.toLowerCase().includes(followerSearch.trim().toLowerCase()),
+  );
 
   useEffect(() => {
     if (!open) return;
-    getOrgTeamsAction().then(setTeams);
-    getOrgClientsAction().then(setClients);
-    getOrgServicesAction().then(setServices);
+    getOrgDepartmentsAction().then(setDepartments);
     getOrgCustomFieldsAction().then(setCustomFields);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!departmentIdValue) {
+      setDepartmentRoster(null);
+      return;
+    }
+    getDepartmentMembersAction(departmentIdValue).then((roster) => {
+      setDepartmentRoster(roster);
+      const stillValid = assigneeIdsValue.filter((id) => roster.includes(id));
+      if (stillValid.length !== assigneeIdsValue.length) {
+        setValue("assigneeIds", stillValid);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, departmentIdValue]);
 
   useEffect(() => {
     if (!open) return;
 
     reset({
       name: task?.name ?? "",
+      description: task?.description ?? "",
       priority: (task?.priority as "low" | "medium" | "high") ?? "medium",
       dueDate: task?.due_date ?? "",
-      assigneeId: task?.assignee_id ?? defaultAssigneeId ?? "",
+      assigneeIds: task ? task.assignees.map((a) => a.id) : defaultAssigneeId ? [defaultAssigneeId] : [],
       projectId: task?.project_id ?? defaultProjectId ?? "",
       siteVisit: task?.site_visit ?? false,
       isPinned: task?.is_pinned ?? false,
       isDraft: task?.is_draft ?? false,
-      teamId: task?.team_id ?? "",
-      clientId: task?.client_id ?? "",
-      serviceId: task?.service_id ?? "",
+      departmentId: task?.department_id ?? "",
       progress: task?.progress ?? 0,
       reminderEnabled: Boolean(task?.remind_at),
       remindAt: task?.remind_at ? toDatetimeLocalValue(task.remind_at) : "",
@@ -221,11 +250,17 @@ export function TaskFormDialog({
     setSubtasks([]);
     setChecklist([]);
     setCustomFieldValues({});
+    setAssigneeSearch("");
+    setFollowerSearch("");
 
     if (task) {
       getTaskDetailAction(task.id).then((detail) => {
         if (!detail) return;
-        reset((prev) => ({ ...prev, followerIds: detail.followers.map((f) => f.id) }));
+        reset((prev) => ({
+          ...prev,
+          followerIds: detail.followers.map((f) => f.id),
+          assigneeIds: detail.assignees.map((a) => a.id),
+        }));
         setSubtasks(detail.subtasks);
         setChecklist(detail.checklist);
         setCustomFieldValues(detail.customFieldValues);
@@ -310,16 +345,15 @@ export function TaskFormDialog({
     startTransition(async () => {
       const input = {
         name: values.name,
+        description: values.description || undefined,
         priority: values.priority,
         dueDate: values.dueDate || null,
-        assigneeId: values.assigneeId || null,
+        assigneeIds: values.assigneeIds,
         projectId: values.projectId || null,
         siteVisit: values.siteVisit,
         isPinned: values.isPinned,
         isDraft: values.isDraft,
-        teamId: values.teamId || null,
-        clientId: values.clientId || null,
-        serviceId: values.serviceId || null,
+        departmentId: values.departmentId || null,
         progress: values.progress,
         remindAt: values.reminderEnabled && values.remindAt ? new Date(values.remindAt).toISOString() : null,
         workflowStatus: values.workflowStatus,
@@ -364,17 +398,14 @@ export function TaskFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={task ? "sm:max-w-3xl" : "sm:max-w-lg"}>
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{task ? "Edit Task" : "Add Task"}</DialogTitle>
         </DialogHeader>
 
-        <div className={task ? "flex gap-4" : ""}>
+        <div className="flex gap-4">
         <form
-          className={cn(
-            "max-h-[70vh] space-y-4 overflow-y-auto pr-1",
-            task && "w-[380px] shrink-0",
-          )}
+          className="max-h-[70vh] w-[380px] shrink-0 space-y-4 overflow-y-auto pr-1"
           onSubmit={handleSubmit(onSubmit)}
           noValidate
         >
@@ -382,6 +413,11 @@ export function TaskFormDialog({
             <Label htmlFor="name">Task name</Label>
             <Input id="name" autoFocus {...register("name")} />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="description">Description</Label>
+            <Textarea id="description" rows={3} placeholder="Add more detail…" {...register("description")} />
           </div>
 
           <div className="space-y-1.5">
@@ -460,10 +496,10 @@ export function TaskFormDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Team</Label>
+              <Label>Department</Label>
               <Controller
                 control={control}
-                name="teamId"
+                name="departmentId"
                 render={({ field }) => (
                   <Select
                     value={field.value || "none"}
@@ -473,64 +509,10 @@ export function TaskFormDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No team</SelectItem>
-                      {teams.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Client</Label>
-              <Controller
-                control={control}
-                name="clientId"
-                render={({ field }) => (
-                  <Select
-                    value={field.value || "none"}
-                    onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No client</SelectItem>
-                      {clients.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Service</Label>
-              <Controller
-                control={control}
-                name="serviceId"
-                render={({ field }) => (
-                  <Select
-                    value={field.value || "none"}
-                    onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No service</SelectItem>
-                      {services.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
+                      <SelectItem value="none">No department</SelectItem>
+                      {departments.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -541,29 +523,58 @@ export function TaskFormDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Assignee</Label>
+            <Label>
+              {departmentIdValue ? "POC (Point of Contact)" : "Assignee"}
+              {departmentIdValue && <span className="text-destructive"> *</span>}
+            </Label>
             <Controller
               control={control}
-              name="assigneeId"
+              name="assigneeIds"
               render={({ field }) => (
-                <Select
-                  value={field.value || "unassigned"}
-                  onValueChange={(v) => field.onChange(v === "unassigned" ? "" : v)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {members.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.full_name}
-                      </SelectItem>
+                <div className="space-y-1 rounded-md border p-2">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={assigneeSearch}
+                      onChange={(e) => setAssigneeSearch(e.target.value)}
+                      placeholder="Search people…"
+                      className="h-8 pl-7 text-sm"
+                    />
+                  </div>
+                  <div className="max-h-32 space-y-1 overflow-y-auto">
+                    {assignableMembers.length === 0 && (
+                      <p className="p-2 text-center text-sm text-muted-foreground">
+                        {departmentIdValue
+                          ? "No members in this department yet — add them in Settings → Departments."
+                          : "No teammates yet."}
+                      </p>
+                    )}
+                    {assignableMembers.length > 0 && filteredAssignableMembers.length === 0 && (
+                      <p className="p-2 text-center text-sm text-muted-foreground">No matches.</p>
+                    )}
+                    {filteredAssignableMembers.map((m) => (
+                      <label
+                        key={m.id}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
+                      >
+                        <Checkbox
+                          checked={field.value.includes(m.id)}
+                          onCheckedChange={() => toggleFollower(m.id, field.value, field.onChange)}
+                        />
+                        <AvatarBadge name={m.full_name} />
+                        <span className="text-sm">{m.full_name}</span>
+                      </label>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                </div>
               )}
             />
+            {assigneeIdsValue.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {assigneeIdsValue.length} {departmentIdValue ? "POC" : "assignee"}(s) selected
+              </p>
+            )}
+            {errors.assigneeIds && <p className="text-xs text-destructive">{errors.assigneeIds.message}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -681,23 +692,37 @@ export function TaskFormDialog({
               control={control}
               name="followerIds"
               render={({ field }) => (
-                <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
-                  {members.length === 0 && (
-                    <p className="p-2 text-center text-sm text-muted-foreground">No teammates yet.</p>
-                  )}
-                  {members.map((m) => (
-                    <label
-                      key={m.id}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
-                    >
-                      <Checkbox
-                        checked={field.value.includes(m.id)}
-                        onCheckedChange={() => toggleFollower(m.id, field.value, field.onChange)}
-                      />
-                      <AvatarBadge name={m.full_name} />
-                      <span className="text-sm">{m.full_name}</span>
-                    </label>
-                  ))}
+                <div className="space-y-1 rounded-md border p-2">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={followerSearch}
+                      onChange={(e) => setFollowerSearch(e.target.value)}
+                      placeholder="Search people…"
+                      className="h-8 pl-7 text-sm"
+                    />
+                  </div>
+                  <div className="max-h-32 space-y-1 overflow-y-auto">
+                    {members.length === 0 && (
+                      <p className="p-2 text-center text-sm text-muted-foreground">No teammates yet.</p>
+                    )}
+                    {members.length > 0 && filteredFollowerMembers.length === 0 && (
+                      <p className="p-2 text-center text-sm text-muted-foreground">No matches.</p>
+                    )}
+                    {filteredFollowerMembers.map((m) => (
+                      <label
+                        key={m.id}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
+                      >
+                        <Checkbox
+                          checked={field.value.includes(m.id)}
+                          onCheckedChange={() => toggleFollower(m.id, field.value, field.onChange)}
+                        />
+                        <AvatarBadge name={m.full_name} />
+                        <span className="text-sm">{m.full_name}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               )}
             />
@@ -892,32 +917,38 @@ export function TaskFormDialog({
           </div>
         </form>
 
-        {task && (
-          <div className="flex max-h-[70vh] min-h-0 w-[340px] shrink-0 flex-col border-l pl-4">
-            <Tabs value={sidePanelTab} onValueChange={setSidePanelTab} className="flex min-h-0 flex-1 flex-col">
-              <TabsList className="w-full">
-                <TabsTrigger value="comment" className="flex-1">
-                  Comment
-                </TabsTrigger>
-                <TabsTrigger value="attachment" className="flex-1">
-                  Attachment
-                </TabsTrigger>
-                <TabsTrigger value="activity" className="flex-1">
-                  Log Activity
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="comment" className="flex min-h-0 flex-1 flex-col">
-                <TaskCommentThread taskId={task.id} />
-              </TabsContent>
-              <TabsContent value="attachment" className="flex min-h-0 flex-1 flex-col">
-                <TaskAttachmentList taskId={task.id} />
-              </TabsContent>
-              <TabsContent value="activity" className="flex min-h-0 flex-1 flex-col">
-                <TaskActivityLog taskId={task.id} relevantProfileIds={relevantProfileIds} />
-              </TabsContent>
-            </Tabs>
-          </div>
-        )}
+        <div className="flex max-h-[70vh] min-h-0 w-[340px] shrink-0 flex-col border-l pl-4">
+          <Tabs value={sidePanelTab} onValueChange={setSidePanelTab} className="flex min-h-0 flex-1 flex-col">
+            <TabsList className="w-full">
+              <TabsTrigger value="comment" className="flex-1">
+                Comment
+              </TabsTrigger>
+              <TabsTrigger value="attachment" className="flex-1">
+                Attachment
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="flex-1">
+                Log Activity
+              </TabsTrigger>
+            </TabsList>
+            {task ? (
+              <>
+                <TabsContent value="comment" className="flex min-h-0 flex-1 flex-col">
+                  <TaskCommentThread taskId={task.id} />
+                </TabsContent>
+                <TabsContent value="attachment" className="flex min-h-0 flex-1 flex-col">
+                  <TaskAttachmentList taskId={task.id} />
+                </TabsContent>
+                <TabsContent value="activity" className="flex min-h-0 flex-1 flex-col">
+                  <TaskActivityLog taskId={task.id} relevantProfileIds={relevantProfileIds} />
+                </TabsContent>
+              </>
+            ) : (
+              <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
+                Save the task first to comment, attach files, or see activity.
+              </div>
+            )}
+          </Tabs>
+        </div>
         </div>
 
         <DialogFooter className="sm:justify-between">

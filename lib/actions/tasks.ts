@@ -28,12 +28,12 @@ export type TaskInput = {
   description?: string;
   priority: "low" | "medium" | "high";
   dueDate?: string | null;
-  assigneeId?: string | null;
+  assigneeIds?: string[];
   projectId?: string | null;
   isPinned?: boolean;
   isDraft?: boolean;
   siteVisit?: boolean;
-  teamId?: string | null;
+  departmentId?: string | null;
   clientId?: string | null;
   serviceId?: string | null;
   progress?: number;
@@ -69,6 +69,27 @@ async function syncTaskFollowers(
   }
 }
 
+async function syncTaskAssignees(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  taskId: string,
+  assigneeIds: string[],
+): Promise<{ added: string[]; removed: string[] }> {
+  const { data: current } = await supabase.from("tp_task_assignees").select("profile_id").eq("task_id", taskId);
+  const currentIds = new Set((current ?? []).map((r) => r.profile_id));
+  const nextIds = new Set(assigneeIds);
+
+  const added = assigneeIds.filter((id) => !currentIds.has(id));
+  const removed = [...currentIds].filter((id) => !nextIds.has(id));
+
+  if (added.length > 0) {
+    await supabase.from("tp_task_assignees").insert(added.map((profile_id) => ({ task_id: taskId, profile_id })));
+  }
+  if (removed.length > 0) {
+    await supabase.from("tp_task_assignees").delete().eq("task_id", taskId).in("profile_id", removed);
+  }
+  return { added, removed };
+}
+
 async function upsertCustomFieldValues(
   supabase: Awaited<ReturnType<typeof createClient>>,
   taskId: string,
@@ -93,7 +114,7 @@ async function spawnNextRecurrence(
     due_date: string | null;
     assignee_id: string | null;
     project_id: string | null;
-    team_id: string | null;
+    department_id: string | null;
     client_id: string | null;
     service_id: string | null;
     organization_id: string;
@@ -118,24 +139,37 @@ async function spawnNextRecurrence(
 
   if (task.recurrence_end_date && next > new Date(task.recurrence_end_date + "T00:00:00")) return;
 
-  await supabase.from("tp_tasks").insert({
-    organization_id: task.organization_id,
-    name: task.name,
-    description: task.description,
-    priority: task.priority,
-    due_date: next.toISOString().slice(0, 10),
-    assignee_id: task.assignee_id,
-    project_id: task.project_id,
-    team_id: task.team_id,
-    client_id: task.client_id,
-    service_id: task.service_id,
-    is_recurring: true,
-    recurrence_frequency: task.recurrence_frequency,
-    recurrence_interval: task.recurrence_interval,
-    recurrence_end_date: task.recurrence_end_date,
-    parent_recurring_task_id: task.parent_recurring_task_id ?? task.id,
-    created_by: task.created_by,
-  });
+  const { data: newTask } = await supabase
+    .from("tp_tasks")
+    .insert({
+      organization_id: task.organization_id,
+      name: task.name,
+      description: task.description,
+      priority: task.priority,
+      due_date: next.toISOString().slice(0, 10),
+      assignee_id: task.assignee_id,
+      project_id: task.project_id,
+      department_id: task.department_id,
+      client_id: task.client_id,
+      service_id: task.service_id,
+      is_recurring: true,
+      recurrence_frequency: task.recurrence_frequency,
+      recurrence_interval: task.recurrence_interval,
+      recurrence_end_date: task.recurrence_end_date,
+      parent_recurring_task_id: task.parent_recurring_task_id ?? task.id,
+      created_by: task.created_by,
+    })
+    .select("id")
+    .single();
+
+  if (!newTask) return;
+
+  const { data: assignees } = await supabase.from("tp_task_assignees").select("profile_id").eq("task_id", task.id);
+  if (assignees && assignees.length > 0) {
+    await supabase
+      .from("tp_task_assignees")
+      .insert(assignees.map((a) => ({ task_id: newTask.id, profile_id: a.profile_id })));
+  }
 }
 
 export async function createTaskAction(input: TaskInput) {
@@ -160,12 +194,12 @@ export async function createTaskAction(input: TaskInput) {
       description: input.description || null,
       priority: input.priority,
       due_date: input.dueDate || null,
-      assignee_id: input.assigneeId || null,
+      assignee_id: input.assigneeIds?.[0] || null,
       project_id: input.projectId || null,
       is_pinned: input.isPinned ?? false,
       is_draft: input.isDraft ?? false,
       site_visit: input.siteVisit ?? false,
-      team_id: input.teamId || null,
+      department_id: input.departmentId || null,
       client_id: input.clientId || null,
       service_id: input.serviceId || null,
       progress: input.progress ?? 0,
@@ -192,22 +226,31 @@ export async function createTaskAction(input: TaskInput) {
     await upsertCustomFieldValues(supabase, task.id, input.customFieldValues);
   }
 
-  if (input.assigneeId && input.assigneeId !== user.id) {
-    const { data: actorProfile } = await supabase
-      .from("tp_profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .single();
+  if (input.assigneeIds && input.assigneeIds.length > 0) {
+    const { added } = await syncTaskAssignees(supabase, task.id, input.assigneeIds);
+    const notifyIds = added.filter((id) => id !== user.id);
 
-    await createNotification({
-      organizationId: profile.organization_id,
-      recipientId: input.assigneeId,
-      actorId: user.id,
-      type: "task_assigned",
-      title: `${actorProfile?.full_name ?? "Someone"} assigned you a task`,
-      body: task.name,
-      link: "/task",
-    });
+    if (notifyIds.length > 0) {
+      const { data: actorProfile } = await supabase
+        .from("tp_profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+
+      await Promise.all(
+        notifyIds.map((recipientId) =>
+          createNotification({
+            organizationId: profile.organization_id,
+            recipientId,
+            actorId: user.id,
+            type: "task_assigned",
+            title: `${actorProfile?.full_name ?? "Someone"} assigned you a task`,
+            body: task.name,
+            link: "/task",
+          }),
+        ),
+      );
+    }
   }
 
   revalidateTaskViews();
@@ -234,12 +277,12 @@ export async function updateTaskAction(taskId: string, input: Partial<TaskInput>
       ...(input.description !== undefined && { description: input.description || null }),
       ...(input.priority !== undefined && { priority: input.priority }),
       ...(input.dueDate !== undefined && { due_date: input.dueDate || null }),
-      ...(input.assigneeId !== undefined && { assignee_id: input.assigneeId || null }),
+      ...(input.assigneeIds !== undefined && { assignee_id: input.assigneeIds[0] || null }),
       ...(input.projectId !== undefined && { project_id: input.projectId || null }),
       ...(input.isPinned !== undefined && { is_pinned: input.isPinned }),
       ...(input.isDraft !== undefined && { is_draft: input.isDraft }),
       ...(input.siteVisit !== undefined && { site_visit: input.siteVisit }),
-      ...(input.teamId !== undefined && { team_id: input.teamId || null }),
+      ...(input.departmentId !== undefined && { department_id: input.departmentId || null }),
       ...(input.clientId !== undefined && { client_id: input.clientId || null }),
       ...(input.serviceId !== undefined && { service_id: input.serviceId || null }),
       ...(input.progress !== undefined && { progress: input.progress }),
@@ -280,28 +323,31 @@ export async function updateTaskAction(taskId: string, input: Partial<TaskInput>
     await logTaskActivity(supabase, { taskId, actorId: user.id, action: "updated" });
   }
 
-  if (
-    existingTask &&
-    input.assigneeId !== undefined &&
-    input.assigneeId &&
-    input.assigneeId !== existingTask.assignee_id &&
-    input.assigneeId !== user.id
-  ) {
-    const { data: actorProfile } = await supabase
-      .from("tp_profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .single();
+  if (existingTask && input.assigneeIds !== undefined) {
+    const { added } = await syncTaskAssignees(supabase, taskId, input.assigneeIds);
+    const notifyIds = added.filter((id) => id !== user.id);
 
-    await createNotification({
-      organizationId: existingTask.organization_id,
-      recipientId: input.assigneeId,
-      actorId: user.id,
-      type: "task_assigned",
-      title: `${actorProfile?.full_name ?? "Someone"} assigned you a task`,
-      body: input.name ?? existingTask.name,
-      link: "/task",
-    });
+    if (notifyIds.length > 0) {
+      const { data: actorProfile } = await supabase
+        .from("tp_profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+
+      await Promise.all(
+        notifyIds.map((recipientId) =>
+          createNotification({
+            organizationId: existingTask.organization_id,
+            recipientId,
+            actorId: user.id,
+            type: "task_assigned",
+            title: `${actorProfile?.full_name ?? "Someone"} assigned you a task`,
+            body: input.name ?? existingTask.name,
+            link: "/task",
+          }),
+        ),
+      );
+    }
   }
 
   revalidateTaskViews();
@@ -320,7 +366,7 @@ export async function toggleTaskCompleteAction(taskId: string, done: boolean) {
     const { data } = await supabase
       .from("tp_tasks")
       .select(
-        "subtasks_mandatory, checklist_mandatory, id, name, description, priority, due_date, assignee_id, project_id, team_id, client_id, service_id, organization_id, created_by, is_recurring, recurrence_frequency, recurrence_interval, recurrence_end_date, parent_recurring_task_id",
+        "subtasks_mandatory, checklist_mandatory, id, name, description, priority, due_date, assignee_id, project_id, department_id, client_id, service_id, organization_id, created_by, is_recurring, recurrence_frequency, recurrence_interval, recurrence_end_date, parent_recurring_task_id",
       )
       .eq("id", taskId)
       .single();
@@ -596,6 +642,13 @@ export async function bulkAssignAction(taskIds: string[], assigneeId: string | n
     .in("id", taskIds);
 
   if (error) return { error: error.message };
+
+  await supabase.from("tp_task_assignees").delete().in("task_id", taskIds);
+  if (assigneeId) {
+    await supabase
+      .from("tp_task_assignees")
+      .insert(taskIds.map((task_id) => ({ task_id, profile_id: assigneeId })));
+  }
 
   revalidateTaskViews();
   return { success: true };
