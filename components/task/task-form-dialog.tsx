@@ -5,7 +5,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { X, Search, TriangleAlert } from "lucide-react";
+import { X, TriangleAlert } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AvatarBadge } from "@/components/task/avatar-badge";
+import { MultiSelectCombobox } from "@/components/task/multi-select-combobox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TaskCommentThread } from "@/components/task/task-comment-thread";
 import { TaskAttachmentList } from "@/components/task/task-attachment-list";
@@ -137,9 +138,6 @@ export function TaskFormDialog({
   const [currentUserId, setCurrentUserId] = useState("");
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [departmentRoster, setDepartmentRoster] = useState<string[] | null>(null);
-  const [assigneeSearch, setAssigneeSearch] = useState("");
-  const [followerSearch, setFollowerSearch] = useState("");
-  const [departmentSearch, setDepartmentSearch] = useState("");
   const [customFields, setCustomFields] = useState<CustomFieldDef[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>([]);
@@ -196,15 +194,6 @@ export function TaskFormDialog({
   const assignableMembers = departmentIdsValue.length > 0
     ? members.filter((m) => (departmentRoster ?? []).includes(m.id))
     : members;
-  const filteredAssignableMembers = assignableMembers.filter((m) =>
-    m.full_name.toLowerCase().includes(assigneeSearch.trim().toLowerCase()),
-  );
-  const filteredFollowerMembers = members.filter((m) =>
-    m.full_name.toLowerCase().includes(followerSearch.trim().toLowerCase()),
-  );
-  const filteredDepartments = departments.filter((d) =>
-    d.name.toLowerCase().includes(departmentSearch.trim().toLowerCase()),
-  );
 
   useEffect(() => {
     if (!open) return;
@@ -261,8 +250,6 @@ export function TaskFormDialog({
     setSubtasks([]);
     setChecklist([]);
     setCustomFieldValues({});
-    setAssigneeSearch("");
-    setFollowerSearch("");
 
     if (task) {
       getTaskDetailAction(task.id).then((detail) => {
@@ -546,42 +533,16 @@ export function TaskFormDialog({
               control={control}
               name="departmentIds"
               render={({ field }) => (
-                <div className="space-y-1 rounded-md border p-2">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={departmentSearch}
-                      onChange={(e) => setDepartmentSearch(e.target.value)}
-                      placeholder="Search departments…"
-                      className="h-8 pl-7 text-sm"
-                    />
-                  </div>
-                  <div className="max-h-32 space-y-1 overflow-y-auto">
-                    {departments.length === 0 && (
-                      <p className="p-2 text-center text-sm text-muted-foreground">No departments yet.</p>
-                    )}
-                    {departments.length > 0 && filteredDepartments.length === 0 && (
-                      <p className="p-2 text-center text-sm text-muted-foreground">No matches.</p>
-                    )}
-                    {filteredDepartments.map((d) => (
-                      <label
-                        key={d.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
-                      >
-                        <Checkbox
-                          checked={field.value.includes(d.id)}
-                          onCheckedChange={() => toggleFollower(d.id, field.value, field.onChange)}
-                        />
-                        <span className="text-sm">{d.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <MultiSelectCombobox
+                  options={departments.map((d) => ({ id: d.id, label: d.name }))}
+                  selectedIds={field.value}
+                  onToggle={(id) => toggleFollower(id, field.value, field.onChange)}
+                  placeholder="No department"
+                  emptyMessage="No departments yet."
+                  searchPlaceholder="Search departments…"
+                />
               )}
             />
-            {departmentIdsValue.length > 0 && (
-              <p className="text-xs text-muted-foreground">{departmentIdsValue.length} department(s) selected</p>
-            )}
           </div>
 
           <div className="space-y-1.5">
@@ -593,49 +554,21 @@ export function TaskFormDialog({
               control={control}
               name="assigneeIds"
               render={({ field }) => (
-                <div className="space-y-1 rounded-md border p-2">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={assigneeSearch}
-                      onChange={(e) => setAssigneeSearch(e.target.value)}
-                      placeholder="Search people…"
-                      className="h-8 pl-7 text-sm"
-                    />
-                  </div>
-                  <div className="max-h-32 space-y-1 overflow-y-auto">
-                    {assignableMembers.length === 0 && (
-                      <p className="p-2 text-center text-sm text-muted-foreground">
-                        {departmentIdsValue.length > 0
-                          ? "No members in these departments yet — add them in Settings → Departments."
-                          : "No teammates yet."}
-                      </p>
-                    )}
-                    {assignableMembers.length > 0 && filteredAssignableMembers.length === 0 && (
-                      <p className="p-2 text-center text-sm text-muted-foreground">No matches.</p>
-                    )}
-                    {filteredAssignableMembers.map((m) => (
-                      <label
-                        key={m.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
-                      >
-                        <Checkbox
-                          checked={field.value.includes(m.id)}
-                          onCheckedChange={() => toggleFollower(m.id, field.value, field.onChange)}
-                        />
-                        <AvatarBadge name={m.full_name} />
-                        <span className="text-sm">{m.full_name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <MultiSelectCombobox
+                  options={assignableMembers.map((m) => ({ id: m.id, label: m.full_name }))}
+                  selectedIds={field.value}
+                  onToggle={(id) => toggleFollower(id, field.value, field.onChange)}
+                  placeholder={departmentIdsValue.length > 0 ? "No POC selected" : "Unassigned"}
+                  emptyMessage={
+                    departmentIdsValue.length > 0
+                      ? "No members in these departments yet — add them in Settings → Departments."
+                      : "No teammates yet."
+                  }
+                  searchPlaceholder="Search people…"
+                  renderLeading={(o) => <AvatarBadge name={o.label} />}
+                />
               )}
             />
-            {assigneeIdsValue.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {assigneeIdsValue.length} {departmentIdsValue.length > 0 ? "POC" : "assignee"}(s) selected
-              </p>
-            )}
             {errors.assigneeIds && <p className="text-xs text-destructive">{errors.assigneeIds.message}</p>}
           </div>
 
@@ -754,43 +687,17 @@ export function TaskFormDialog({
               control={control}
               name="followerIds"
               render={({ field }) => (
-                <div className="space-y-1 rounded-md border p-2">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={followerSearch}
-                      onChange={(e) => setFollowerSearch(e.target.value)}
-                      placeholder="Search people…"
-                      className="h-8 pl-7 text-sm"
-                    />
-                  </div>
-                  <div className="max-h-32 space-y-1 overflow-y-auto">
-                    {members.length === 0 && (
-                      <p className="p-2 text-center text-sm text-muted-foreground">No teammates yet.</p>
-                    )}
-                    {members.length > 0 && filteredFollowerMembers.length === 0 && (
-                      <p className="p-2 text-center text-sm text-muted-foreground">No matches.</p>
-                    )}
-                    {filteredFollowerMembers.map((m) => (
-                      <label
-                        key={m.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
-                      >
-                        <Checkbox
-                          checked={field.value.includes(m.id)}
-                          onCheckedChange={() => toggleFollower(m.id, field.value, field.onChange)}
-                        />
-                        <AvatarBadge name={m.full_name} />
-                        <span className="text-sm">{m.full_name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <MultiSelectCombobox
+                  options={members.map((m) => ({ id: m.id, label: m.full_name }))}
+                  selectedIds={field.value}
+                  onToggle={(id) => toggleFollower(id, field.value, field.onChange)}
+                  placeholder="No followers"
+                  emptyMessage="No teammates yet."
+                  searchPlaceholder="Search people…"
+                  renderLeading={(o) => <AvatarBadge name={o.label} />}
+                />
               )}
             />
-            {followerIds.length > 0 && (
-              <p className="text-xs text-muted-foreground">{followerIds.length} follower(s) selected</p>
-            )}
           </div>
 
           <div className="space-y-1.5">
