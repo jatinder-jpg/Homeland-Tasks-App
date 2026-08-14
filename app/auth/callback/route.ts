@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_ORG_CODE } from "@/lib/constants";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -38,18 +39,10 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   if (!existingProfile) {
-    const fullName = (user.user_metadata?.full_name as string | undefined) ?? "Admin";
-    const joinOrgCode = user.user_metadata?.join_org_code as string | undefined;
+    const fullName = (user.user_metadata?.full_name as string | undefined) ?? "Member";
+    const joinOrgCode = (user.user_metadata?.join_org_code as string | undefined) ?? DEFAULT_ORG_CODE;
 
-    if (joinOrgCode) {
-      await supabase.rpc("tp_join_organization", { org_code: joinOrgCode, member_full_name: fullName });
-    } else {
-      const orgName = (user.user_metadata?.org_name as string | undefined) ?? "My Workspace";
-      await supabase.rpc("tp_create_organization_and_admin", {
-        org_name: orgName,
-        admin_full_name: fullName,
-      });
-    }
+    await supabase.rpc("tp_join_organization", { org_code: joinOrgCode, member_full_name: fullName });
   }
 
   return NextResponse.redirect(`${origin}${next}`);

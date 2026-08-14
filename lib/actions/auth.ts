@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_ORG_CODE } from "@/lib/constants";
 
 async function getOrigin() {
   const h = await headers();
@@ -31,32 +32,15 @@ export async function signUpAction(formData: FormData): Promise<ActionResult> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const fullName = String(formData.get("fullName") ?? "");
-  const mode = String(formData.get("mode") ?? "create");
-  const orgName = String(formData.get("orgName") ?? "");
-  const orgCode = String(formData.get("orgCode") ?? "").trim().toUpperCase();
 
   const supabase = await createClient();
-
-  if (mode === "join") {
-    const { data: orgName2, error: lookupError } = await supabase.rpc(
-      "tp_lookup_org_name_by_code",
-      { p_code: orgCode },
-    );
-    if (lookupError || !orgName2) {
-      return { error: "That organization code doesn't match any workspace." };
-    }
-  }
-
   const origin = await getOrigin();
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data:
-        mode === "join"
-          ? { full_name: fullName, join_org_code: orgCode }
-          : { full_name: fullName, org_name: orgName },
+      data: { full_name: fullName, join_org_code: DEFAULT_ORG_CODE },
       emailRedirectTo: `${origin}/auth/callback?next=/dashboard`,
     },
   });
@@ -66,7 +50,7 @@ export async function signUpAction(formData: FormData): Promise<ActionResult> {
   }
 
   // If email confirmation is disabled, signUp() returns an active session
-  // immediately and /auth/callback never runs — bootstrap the org/profile here.
+  // immediately and /auth/callback never runs — bootstrap the profile here.
   if (data.session && data.user) {
     const { data: existingProfile } = await supabase
       .from("tp_profiles")
@@ -75,14 +59,7 @@ export async function signUpAction(formData: FormData): Promise<ActionResult> {
       .maybeSingle();
 
     if (!existingProfile) {
-      if (mode === "join") {
-        await supabase.rpc("tp_join_organization", { org_code: orgCode, member_full_name: fullName });
-      } else {
-        await supabase.rpc("tp_create_organization_and_admin", {
-          org_name: orgName,
-          admin_full_name: fullName,
-        });
-      }
+      await supabase.rpc("tp_join_organization", { org_code: DEFAULT_ORG_CODE, member_full_name: fullName });
     }
 
     redirect("/dashboard");

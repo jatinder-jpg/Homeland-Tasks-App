@@ -11,23 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const schema = z
-  .object({
-    fullName: z.string().min(1, "Your name is required"),
-    mode: z.enum(["create", "join"]),
-    orgName: z.string().optional(),
-    orgCode: z.string().optional(),
-    email: z.string().email("Enter a valid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-  })
-  .superRefine((data, ctx) => {
-    if (data.mode === "create" && !data.orgName?.trim()) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Company/workspace name is required", path: ["orgName"] });
-    }
-    if (data.mode === "join" && !data.orgCode?.trim()) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Organization code is required", path: ["orgCode"] });
-    }
-  });
+const schema = z.object({
+  fullName: z.string().min(1, "Your name is required"),
+  email: z.string().email("Enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
 
 type FormValues = z.infer<typeof schema>;
 
@@ -39,20 +27,13 @@ export function SignUpForm() {
   const {
     register,
     handleSubmit,
-    watch,
-    setValue,
     formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { mode: "create" } });
-
-  const mode = watch("mode");
+  } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = (values: FormValues) => {
     setServerError(null);
     const formData = new FormData();
     formData.set("fullName", values.fullName);
-    formData.set("mode", values.mode);
-    formData.set("orgName", values.orgName ?? "");
-    formData.set("orgCode", values.orgCode ?? "");
     formData.set("email", values.email);
     formData.set("password", values.password);
 
@@ -73,7 +54,7 @@ export function SignUpForm() {
         <h1 className="mt-4 text-2xl font-bold">Check your email</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           We sent a confirmation link to <span className="font-medium">{submitted}</span>.
-          Click it to activate your workspace, then sign in.
+          Click it to activate your account, then sign in.
         </p>
         <Button asChild className="mt-6 w-full">
           <Link href="/sign-in">Back to sign in</Link>
@@ -84,7 +65,7 @@ export function SignUpForm() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Create your workspace</h1>
+      <h1 className="text-2xl font-bold">Create your account</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Set up your account to get started.
       </p>
@@ -97,51 +78,6 @@ export function SignUpForm() {
             <p className="text-xs text-destructive">{errors.fullName.message}</p>
           )}
         </div>
-
-        <div className="space-y-1.5">
-          <Label>Workspace</Label>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant={mode === "create" ? "default" : "outline"}
-              size="sm"
-              className="flex-1"
-              onClick={() => setValue("mode", "create")}
-            >
-              Create new
-            </Button>
-            <Button
-              type="button"
-              variant={mode === "join" ? "default" : "outline"}
-              size="sm"
-              className="flex-1"
-              onClick={() => setValue("mode", "join")}
-            >
-              Join existing
-            </Button>
-          </div>
-        </div>
-
-        {mode === "create" ? (
-          <div className="space-y-1.5">
-            <Label htmlFor="orgName">Company / workspace name</Label>
-            <Input id="orgName" placeholder="Acme Inc." {...register("orgName")} />
-            {errors.orgName && (
-              <p className="text-xs text-destructive">{errors.orgName.message}</p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            <Label htmlFor="orgCode">Organization code</Label>
-            <Input id="orgCode" placeholder="T-62850" {...register("orgCode")} />
-            <p className="text-xs text-muted-foreground">
-              Ask your workspace admin for this — it's shown in their Settings → Organization tab.
-            </p>
-            {errors.orgCode && (
-              <p className="text-xs text-destructive">{errors.orgCode.message}</p>
-            )}
-          </div>
-        )}
 
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
