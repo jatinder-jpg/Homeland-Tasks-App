@@ -33,7 +33,7 @@ export type TaskInput = {
   isPinned?: boolean;
   isDraft?: boolean;
   siteVisit?: boolean;
-  departmentId?: string | null;
+  departmentIds?: string[];
   clientId?: string | null;
   serviceId?: string | null;
   progress?: number;
@@ -88,6 +88,31 @@ async function syncTaskAssignees(
     await supabase.from("tp_task_assignees").delete().eq("task_id", taskId).in("profile_id", removed);
   }
   return { added, removed };
+}
+
+async function syncTaskDepartments(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  taskId: string,
+  departmentIds: string[],
+) {
+  const { data: current } = await supabase
+    .from("tp_task_departments")
+    .select("department_id")
+    .eq("task_id", taskId);
+  const currentIds = new Set((current ?? []).map((r) => r.department_id));
+  const nextIds = new Set(departmentIds);
+
+  const toAdd = departmentIds.filter((id) => !currentIds.has(id));
+  const toRemove = [...currentIds].filter((id) => !nextIds.has(id));
+
+  if (toAdd.length > 0) {
+    await supabase
+      .from("tp_task_departments")
+      .insert(toAdd.map((department_id) => ({ task_id: taskId, department_id })));
+  }
+  if (toRemove.length > 0) {
+    await supabase.from("tp_task_departments").delete().eq("task_id", taskId).in("department_id", toRemove);
+  }
 }
 
 async function upsertCustomFieldValues(
@@ -170,6 +195,16 @@ async function spawnNextRecurrence(
       .from("tp_task_assignees")
       .insert(assignees.map((a) => ({ task_id: newTask.id, profile_id: a.profile_id })));
   }
+
+  const { data: departments } = await supabase
+    .from("tp_task_departments")
+    .select("department_id")
+    .eq("task_id", task.id);
+  if (departments && departments.length > 0) {
+    await supabase
+      .from("tp_task_departments")
+      .insert(departments.map((d) => ({ task_id: newTask.id, department_id: d.department_id })));
+  }
 }
 
 export async function createTaskAction(input: TaskInput) {
@@ -199,7 +234,7 @@ export async function createTaskAction(input: TaskInput) {
       is_pinned: input.isPinned ?? false,
       is_draft: input.isDraft ?? false,
       site_visit: input.siteVisit ?? false,
-      department_id: input.departmentId || null,
+      department_id: input.departmentIds?.[0] || null,
       client_id: input.clientId || null,
       service_id: input.serviceId || null,
       progress: input.progress ?? 0,
@@ -220,6 +255,10 @@ export async function createTaskAction(input: TaskInput) {
 
   if (input.followerIds && input.followerIds.length > 0) {
     await syncTaskFollowers(supabase, task.id, input.followerIds);
+  }
+
+  if (input.departmentIds && input.departmentIds.length > 0) {
+    await syncTaskDepartments(supabase, task.id, input.departmentIds);
   }
 
   if (input.customFieldValues) {
@@ -282,7 +321,7 @@ export async function updateTaskAction(taskId: string, input: Partial<TaskInput>
       ...(input.isPinned !== undefined && { is_pinned: input.isPinned }),
       ...(input.isDraft !== undefined && { is_draft: input.isDraft }),
       ...(input.siteVisit !== undefined && { site_visit: input.siteVisit }),
-      ...(input.departmentId !== undefined && { department_id: input.departmentId || null }),
+      ...(input.departmentIds !== undefined && { department_id: input.departmentIds[0] || null }),
       ...(input.clientId !== undefined && { client_id: input.clientId || null }),
       ...(input.serviceId !== undefined && { service_id: input.serviceId || null }),
       ...(input.progress !== undefined && { progress: input.progress }),
@@ -302,6 +341,10 @@ export async function updateTaskAction(taskId: string, input: Partial<TaskInput>
 
   if (input.followerIds !== undefined) {
     await syncTaskFollowers(supabase, taskId, input.followerIds);
+  }
+
+  if (input.departmentIds !== undefined) {
+    await syncTaskDepartments(supabase, taskId, input.departmentIds);
   }
 
   if (input.customFieldValues) {

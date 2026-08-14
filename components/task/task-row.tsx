@@ -106,9 +106,18 @@ export function TaskRow({
         {task.name}
       </span>
 
-      {task.department && (
-        <span className="hidden shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground sm:inline">
-          {task.department.name}
+      {task.departments.length > 0 && (
+        <span className="hidden shrink-0 gap-1 sm:flex">
+          {task.departments.slice(0, 2).map((d) => (
+            <span key={d.id} className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+              {d.name}
+            </span>
+          ))}
+          {task.departments.length > 2 && (
+            <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+              +{task.departments.length - 2}
+            </span>
+          )}
         </span>
       )}
 

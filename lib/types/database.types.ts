@@ -1212,6 +1212,39 @@ export type Database = {
           },
         ]
       }
+      tp_task_departments: {
+        Row: {
+          created_at: string
+          department_id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tp_task_departments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "tp_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tp_task_departments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tp_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tp_task_assignees: {
         Row: {
           created_at: string
