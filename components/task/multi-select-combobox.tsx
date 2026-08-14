@@ -51,16 +51,24 @@ export function MultiSelectCombobox({
               >
                 {renderLeading?.(o)}
                 {o.label}
-                <button
-                  type="button"
+                <span
+                  role="button"
+                  tabIndex={0}
                   aria-label={`Remove ${o.label}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onToggle(o.id);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onToggle(o.id);
+                    }
+                  }}
                 >
                   <X className="size-3 cursor-pointer text-muted-foreground hover:text-foreground" />
-                </button>
+                </span>
               </span>
             ))
           )}
