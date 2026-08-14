@@ -431,14 +431,14 @@ export function TaskFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) handleClose(); }}>
-      <DialogContent className="w-[95vw] sm:max-w-[1400px] max-h-[92vh] overflow-y-auto">
+      <DialogContent className="w-[92vw] sm:max-w-[1200px] max-h-[88vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{task ? "Edit Task" : "Add Task"}</DialogTitle>
         </DialogHeader>
 
         <div className="flex gap-4">
         <form
-          className="max-h-[75vh] w-[420px] shrink-0 space-y-4 overflow-y-auto pr-1"
+          className="max-h-[75vh] min-w-[320px] flex-[2] space-y-4 overflow-y-auto pr-1"
           onSubmit={handleSubmit(onSubmit)}
           noValidate
         >
@@ -886,7 +886,7 @@ export function TaskFormDialog({
           </div>
         </form>
 
-        <div className="flex max-h-[75vh] min-h-0 min-w-[400px] flex-1 flex-col border-l pl-4">
+        <div className="flex max-h-[75vh] min-h-0 min-w-[360px] flex-[3] flex-col border-l pl-4">
           <Tabs value={sidePanelTab} onValueChange={setSidePanelTab} className="flex min-h-0 flex-1 flex-col">
             <TabsList className="w-full">
               <TabsTrigger value="comment" className="flex-1">
