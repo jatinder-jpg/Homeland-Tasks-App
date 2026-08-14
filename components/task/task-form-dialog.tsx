@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -144,6 +144,7 @@ export function TaskFormDialog({
   const [checklist, setChecklist] = useState<TaskChecklistItem[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [newChecklistLabel, setNewChecklistLabel] = useState("");
+  const dialogContentRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -201,6 +202,18 @@ export function TaskFormDialog({
     getOrgCustomFieldsAction().then(setCustomFields);
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? ""));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const el = dialogContentRef.current;
+    if (!el) return;
+    el.scrollTop = 0;
+    const pinScroll = () => {
+      if (el.scrollTop !== 0) el.scrollTop = 0;
+    };
+    el.addEventListener("scroll", pinScroll);
+    return () => el.removeEventListener("scroll", pinScroll);
   }, [open]);
 
   useEffect(() => {
@@ -431,20 +444,24 @@ export function TaskFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) handleClose(); }}>
-      <DialogContent className="w-[92vw] sm:max-w-[1200px] max-h-[88vh] overflow-y-auto">
+      <DialogContent
+        ref={dialogContentRef}
+        className="w-[92vw] sm:max-w-[1200px] max-h-[88vh] overflow-hidden [overflow-anchor:none]"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{task ? "Edit Task" : "Add Task"}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex gap-4">
+        <div className="flex min-h-0 gap-4 overflow-hidden">
         <form
-          className="max-h-[75vh] min-w-[320px] flex-[2] space-y-4 overflow-y-auto pr-1"
+          className="max-h-[calc(88vh-8rem)] min-h-0 min-w-[320px] flex-[2] space-y-4 overflow-y-auto pr-1"
           onSubmit={handleSubmit(onSubmit)}
           noValidate
         >
           <div className="space-y-1.5">
             <Label htmlFor="name">Task name</Label>
-            <Input id="name" autoFocus {...register("name")} />
+            <Input id="name" {...register("name")} />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
 
@@ -886,7 +903,7 @@ export function TaskFormDialog({
           </div>
         </form>
 
-        <div className="flex max-h-[75vh] min-h-0 min-w-[360px] flex-[3] flex-col border-l pl-4">
+        <div className="flex max-h-[calc(88vh-8rem)] min-h-0 min-w-[360px] flex-[3] flex-col overflow-hidden border-l pl-4">
           <Tabs value={sidePanelTab} onValueChange={setSidePanelTab} className="flex min-h-0 flex-1 flex-col">
             <TabsList className="w-full">
               <TabsTrigger value="comment" className="flex-1">

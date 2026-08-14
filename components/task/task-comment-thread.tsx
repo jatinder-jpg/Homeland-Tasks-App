@@ -19,7 +19,7 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
   const [isPending, startTransition] = useTransition();
   const [isUploading, setIsUploading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,7 +64,8 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
   }, [channelId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   function handleSend() {
@@ -124,7 +125,7 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex-1 space-y-3 overflow-y-auto p-3">
+      <div ref={messagesContainerRef} className="flex-1 space-y-3 overflow-y-auto p-3">
         {messages.length === 0 && (
           <p className="pt-10 text-center text-sm text-muted-foreground">No comments yet. Say hello!</p>
         )}
@@ -167,7 +168,6 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
             </div>
           );
         })}
-        <div ref={bottomRef} />
       </div>
 
       <div className="flex items-center gap-2 border-t p-3">
