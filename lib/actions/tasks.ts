@@ -293,7 +293,7 @@ export async function createTaskAction(input: TaskInput) {
   }
 
   revalidateTaskViews();
-  return { success: true };
+  return { success: true, id: task.id };
 }
 
 export async function updateTaskAction(taskId: string, input: Partial<TaskInput>) {
@@ -658,7 +658,7 @@ export async function getOrgMembersAction() {
 
   const { data } = await supabase
     .from("tp_profiles")
-    .select("id, full_name")
+    .select("id, full_name, phone")
     .order("full_name", { ascending: true });
 
   return data ?? [];

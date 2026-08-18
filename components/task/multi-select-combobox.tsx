@@ -86,7 +86,12 @@ export function MultiSelectCombobox({
             autoFocus
           />
         </div>
-        <div className="mt-1 max-h-48 space-y-1 overflow-y-auto">
+        <div
+          className="mt-1 max-h-48 space-y-1 overflow-y-auto"
+          onWheel={(e) => {
+            e.currentTarget.scrollTop += e.deltaY;
+          }}
+        >
           {options.length === 0 && (
             <p className="p-2 text-center text-sm text-muted-foreground">{emptyMessage}</p>
           )}

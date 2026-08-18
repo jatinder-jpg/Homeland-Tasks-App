@@ -144,6 +144,7 @@ export function TaskFormDialog({
   const [checklist, setChecklist] = useState<TaskChecklistItem[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [newChecklistLabel, setNewChecklistLabel] = useState("");
+  const [draftTaskId, setDraftTaskId] = useState<string | null>(null);
   const dialogContentRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -182,6 +183,7 @@ export function TaskFormDialog({
     },
   });
 
+  const nameValue = watch("name");
   const isDraftValue = watch("isDraft");
   const progressValue = watch("progress");
   const reminderEnabled = watch("reminderEnabled");
@@ -190,6 +192,7 @@ export function TaskFormDialog({
   const assigneeIdsValue = watch("assigneeIds");
   const departmentIdsValue = watch("departmentIds");
   const noProjectsAvailable = projects.length === 0;
+  const effectiveTaskId = task?.id ?? draftTaskId;
   const [sidePanelTab, setSidePanelTab] = useState("comment");
   const relevantProfileIds = [...assigneeIdsValue, ...followerIds];
   const assignableMembers = departmentIdsValue.length > 0
@@ -217,6 +220,22 @@ export function TaskFormDialog({
   }, [open]);
 
   useEffect(() => {
+    if (!open || task || draftTaskId) return;
+    const trimmed = nameValue.trim();
+    if (!trimmed) return;
+    const timer = setTimeout(() => {
+      const input = buildTaskInput({ ...getValues(), isDraft: true });
+      createTaskAction(input).then((result) => {
+        if (result && "success" in result && result.id) {
+          setDraftTaskId(result.id);
+        }
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, task, draftTaskId, nameValue]);
+
+  useEffect(() => {
     if (!open) return;
     if (departmentIdsValue.length === 0) {
       setDepartmentRoster(null);
@@ -231,6 +250,7 @@ export function TaskFormDialog({
 
   useEffect(() => {
     if (!open) return;
+    setDraftTaskId(null);
 
     reset({
       name: task?.name ?? "",
@@ -381,7 +401,9 @@ export function TaskFormDialog({
 
       const result = task
         ? await updateTaskAction(task.id, input)
-        : await createTaskAction(input);
+        : draftTaskId
+          ? await updateTaskAction(draftTaskId, input)
+          : await createTaskAction(input);
 
       if (result && "error" in result) {
         toast.error(result.error);
@@ -399,7 +421,8 @@ export function TaskFormDialog({
       const values = getValues();
       if (values.name.trim()) {
         const input = buildTaskInput({ ...values, isDraft: true });
-        createTaskAction(input).then((result) => {
+        const action = draftTaskId ? updateTaskAction(draftTaskId, input) : createTaskAction(input);
+        action.then((result) => {
           if (result && "error" in result) {
             toast.error(result.error);
             return;
@@ -915,21 +938,23 @@ export function TaskFormDialog({
                 Log Activity
               </TabsTrigger>
             </TabsList>
-            {task ? (
+            {effectiveTaskId ? (
               <>
                 <TabsContent value="comment" className="flex min-h-0 flex-1 flex-col">
-                  <TaskCommentThread taskId={task.id} />
+                  <TaskCommentThread taskId={effectiveTaskId} />
                 </TabsContent>
                 <TabsContent value="attachment" className="flex min-h-0 flex-1 flex-col">
-                  <TaskAttachmentList taskId={task.id} />
+                  <TaskAttachmentList taskId={effectiveTaskId} />
                 </TabsContent>
                 <TabsContent value="activity" className="flex min-h-0 flex-1 flex-col">
-                  <TaskActivityLog taskId={task.id} relevantProfileIds={relevantProfileIds} />
+                  <TaskActivityLog taskId={effectiveTaskId} relevantProfileIds={relevantProfileIds} />
                 </TabsContent>
               </>
             ) : (
               <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
-                Save the task first to comment, attach files, or see activity.
+                {nameValue.trim()
+                  ? "Setting up comments…"
+                  : "Type a task name to start commenting, attaching files, or tracking activity."}
               </div>
             )}
           </Tabs>
