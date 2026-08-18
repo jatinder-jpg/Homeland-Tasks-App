@@ -193,7 +193,7 @@ export function TaskFormDialog({
   const [sidePanelTab, setSidePanelTab] = useState("comment");
   const relevantProfileIds = [...assigneeIdsValue, ...followerIds];
   const assignableMembers = departmentIdsValue.length > 0
-    ? members.filter((m) => (departmentRoster ?? []).includes(m.id))
+    ? members.filter((m) => (departmentRoster ?? []).includes(m.id) || assigneeIdsValue.includes(m.id))
     : members;
 
   useEffect(() => {
@@ -225,10 +225,6 @@ export function TaskFormDialog({
     Promise.all(departmentIdsValue.map((id) => getDepartmentMembersAction(id))).then((rosters) => {
       const union = Array.from(new Set(rosters.flat()));
       setDepartmentRoster(union);
-      const stillValid = assigneeIdsValue.filter((id) => union.includes(id));
-      if (stillValid.length !== assigneeIdsValue.length) {
-        setValue("assigneeIds", stillValid);
-      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, JSON.stringify(departmentIdsValue)]);
