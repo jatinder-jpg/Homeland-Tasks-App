@@ -451,6 +451,9 @@ export function TaskFormDialog({
       >
         <DialogHeader>
           <DialogTitle>{task ? "Edit Task" : "Add Task"}</DialogTitle>
+          {task?.creator && (
+            <p className="text-xs text-muted-foreground">Created by {task.creator.full_name}</p>
+          )}
         </DialogHeader>
 
         <div className="flex min-h-0 gap-4 overflow-hidden">

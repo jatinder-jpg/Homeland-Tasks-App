@@ -8,6 +8,7 @@ export type TaskWithAssignee = Database["public"]["Tables"]["tp_tasks"]["Row"] &
   departments: { id: string; name: string }[];
   client: { id: string; name: string } | null;
   service: { id: string; name: string } | null;
+  creator: { id: string; full_name: string } | null;
 };
 
 export type TaskSubtask = Database["public"]["Tables"]["tp_task_subtasks"]["Row"] & {
@@ -55,7 +56,7 @@ export async function getTasks(
   let query = supabase
     .from("tp_tasks")
     .select(
-      "*, assignee:tp_profiles!tp_tasks_assignee_id_fkey(id, full_name), department:tp_departments!tp_tasks_department_id_fkey(id, name), client:tp_clients(id, name), service:tp_services(id, name)",
+      "*, assignee:tp_profiles!tp_tasks_assignee_id_fkey(id, full_name), department:tp_departments!tp_tasks_department_id_fkey(id, name), client:tp_clients(id, name), service:tp_services(id, name), creator:tp_profiles!tp_tasks_created_by_fkey(id, full_name)",
     )
     .order("position", { ascending: true })
     .order("created_at", { ascending: false });
@@ -119,7 +120,7 @@ export async function getTaskDetail(
     supabase
       .from("tp_tasks")
       .select(
-        "*, assignee:tp_profiles!tp_tasks_assignee_id_fkey(id, full_name), department:tp_departments!tp_tasks_department_id_fkey(id, name), client:tp_clients(id, name), service:tp_services(id, name)",
+        "*, assignee:tp_profiles!tp_tasks_assignee_id_fkey(id, full_name), department:tp_departments!tp_tasks_department_id_fkey(id, name), client:tp_clients(id, name), service:tp_services(id, name), creator:tp_profiles!tp_tasks_created_by_fkey(id, full_name)",
       )
       .eq("id", taskId)
       .single(),

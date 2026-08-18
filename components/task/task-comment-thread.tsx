@@ -18,6 +18,7 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
   const [draft, setDraft] = useState("");
   const [isPending, startTransition] = useTransition();
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,8 +30,10 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
     getOrCreateTaskChannelAction(taskId).then((result) => {
       if (cancelled) return;
+      setIsLoading(false);
       if ("error" in result) {
         toast.error(result.error);
         return;
@@ -70,7 +73,11 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
 
   function handleSend() {
     const body = draft.trim();
-    if (!body || !channelId) return;
+    if (!body) return;
+    if (!channelId) {
+      toast.error("Comments are still loading, please try again in a moment");
+      return;
+    }
     setDraft("");
     startTransition(async () => {
       const result = await sendTaskCommentAction(channelId, taskId, body);
@@ -81,7 +88,11 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file || !channelId) return;
+    if (!file) return;
+    if (!channelId) {
+      toast.error("Comments are still loading, please try again in a moment");
+      return;
+    }
 
     setIsUploading(true);
     const uploaded = await uploadFileToStorage(file);
@@ -126,7 +137,10 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={messagesContainerRef} className="flex-1 space-y-3 overflow-y-auto p-3">
-        {messages.length === 0 && (
+        {isLoading && (
+          <p className="pt-10 text-center text-sm text-muted-foreground">Loading comments…</p>
+        )}
+        {!isLoading && messages.length === 0 && (
           <p className="pt-10 text-center text-sm text-muted-foreground">No comments yet. Say hello!</p>
         )}
         {messages.map((message) => {

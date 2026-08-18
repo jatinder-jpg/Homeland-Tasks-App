@@ -2,26 +2,30 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getTaskChannelMessages, type TaskMessage } from "@/lib/queries/task-comments";
+import type { TaskMessage } from "@/lib/queries/task-comments";
 
 export async function getOrCreateTaskChannelAction(
   taskId: string,
 ): Promise<{ channelId: string; messages: TaskMessage[] } | { error: string }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+
+  const [{ data: { user } }, { data: existing }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from("tp_discussion_channels")
+      .select(
+        "id, messages:tp_discussion_messages(*, sender:tp_profiles!tp_discussion_messages_sender_id_fkey(id, full_name), attachment:tp_files(id, name, storage_path, mime_type))",
+      )
+      .eq("task_id", taskId)
+      .eq("type", "task")
+      .maybeSingle(),
+  ]);
   if (!user) return { error: "Not authenticated" };
 
-  const { data: existing } = await supabase
-    .from("tp_discussion_channels")
-    .select("id")
-    .eq("task_id", taskId)
-    .eq("type", "task")
-    .maybeSingle();
-
   if (existing) {
-    const messages = await getTaskChannelMessages(supabase, existing.id);
+    const messages = ((existing as unknown as { messages: TaskMessage[] }).messages ?? []).sort((a, b) =>
+      a.created_at.localeCompare(b.created_at),
+    );
     return { channelId: existing.id, messages };
   }
 
