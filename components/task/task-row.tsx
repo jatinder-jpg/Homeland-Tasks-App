@@ -39,12 +39,14 @@ export function TaskRow({
   selectable,
   selected,
   onToggleSelect,
+  dateType = "due",
 }: {
   task: TaskWithAssignee;
   onClick: () => void;
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  dateType?: "due" | "created";
 }) {
   const [isPending, startTransition] = useTransition();
   const done = task.status === "done";
@@ -156,10 +158,16 @@ export function TaskRow({
         <MessageSquare className="size-4" />
       </button>
 
-      {task.due_date && (
+      {dateType === "created" ? (
         <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
-          {formatShortDate(new Date(task.due_date + "T00:00:00"))}
+          {formatShortDate(new Date(task.created_at))}
         </span>
+      ) : (
+        task.due_date && (
+          <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+            {formatShortDate(new Date(task.due_date + "T00:00:00"))}
+          </span>
+        )
       )}
     </div>
   );

@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -27,7 +29,7 @@ import {
 import { TaskViewTabs } from "@/components/task/task-view-tabs";
 import { TaskRow } from "@/components/task/task-row";
 import { TaskFormDialog } from "@/components/task/task-form-dialog";
-import { groupTasksForList, GROUP_ORDER, GROUP_LABELS } from "@/lib/utils/task-grouping";
+import { groupTasksForList, GROUP_ORDER, GROUP_LABELS, type TaskDateType } from "@/lib/utils/task-grouping";
 import {
   bulkUpdateStatusAction,
   bulkAssignAction,
@@ -35,6 +37,24 @@ import {
   bulkDeleteAction,
 } from "@/lib/actions/tasks";
 import type { TaskWithAssignee } from "@/lib/queries/tasks";
+
+const WORKFLOW_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "pending", label: "Pending" },
+  { value: "approval_awaiting", label: "Approval Awaiting" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "on_hold", label: "On Hold" },
+  { value: "third_party_pending", label: "Third Party Pending" },
+  { value: "under_review", label: "Under Review" },
+];
+
+const PRIORITY_OPTIONS: { value: string; label: string }[] = [
+  { value: "high", label: "High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
+];
+
+type SortBy = "default" | "priority" | "dueDate" | "name";
+const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
 export function TaskListView({
   tasks,
@@ -61,6 +81,11 @@ export function TaskListView({
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [isBulkPending, setIsBulkPending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
+  const [priorityFilter, setPriorityFilter] = useState<Set<string>>(new Set());
+  const [assigneeFilter, setAssigneeFilter] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<SortBy>("default");
+  const [dateType, setDateType] = useState<TaskDateType>("due");
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -98,13 +123,46 @@ export function TaskListView({
     return source;
   }, [source, quickFilter, currentUserId]);
 
-  const filtered = useMemo(() => {
+  const searched = useMemo(() => {
     if (!search.trim()) return quickFiltered;
     const q = search.toLowerCase();
     return quickFiltered.filter((t) => t.name.toLowerCase().includes(q));
   }, [quickFiltered, search]);
 
-  const groups = useMemo(() => groupTasksForList(filtered), [filtered]);
+  const filtered = useMemo(() => {
+    let result = searched;
+    if (statusFilter.size > 0) {
+      result = result.filter((t) => t.workflow_status && statusFilter.has(t.workflow_status));
+    }
+    if (priorityFilter.size > 0) {
+      result = result.filter((t) => priorityFilter.has(t.priority));
+    }
+    if (assigneeFilter.size > 0) {
+      result = result.filter((t) => t.assignees.some((a) => assigneeFilter.has(a.id)));
+    }
+    if (sortBy !== "default") {
+      result = [...result].sort((a, b) => {
+        if (sortBy === "priority") return (PRIORITY_RANK[a.priority] ?? 99) - (PRIORITY_RANK[b.priority] ?? 99);
+        if (sortBy === "dueDate") return (a.due_date ?? "9999-99-99").localeCompare(b.due_date ?? "9999-99-99");
+        if (sortBy === "name") return a.name.localeCompare(b.name);
+        return 0;
+      });
+    }
+    return result;
+  }, [searched, statusFilter, priorityFilter, assigneeFilter, sortBy]);
+
+  const filterCount = priorityFilter.size + assigneeFilter.size;
+
+  const groups = useMemo(() => groupTasksForList(filtered, dateType), [filtered, dateType]);
+
+  function toggleInSet(setState: (fn: (prev: Set<string>) => Set<string>) => void, value: string) {
+    setState((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return next;
+    });
+  }
 
   function openCreate() {
     setEditingTask(null);
@@ -264,20 +322,150 @@ export function TaskListView({
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button variant="outline" size="sm">
-            <Filter className="size-4" />
-            Filter
-          </Button>
-          <Button variant="outline" size="sm">
-            Status
-            <ChevronDown className="size-4" />
-          </Button>
-          <Button variant="outline" size="sm">
-            Default
-          </Button>
-          <Button variant="outline" size="sm">
-            Date Type
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant={filterCount > 0 ? "default" : "outline"} size="sm">
+                <Filter className="size-4" />
+                Filter{filterCount > 0 && ` (${filterCount})`}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-3" align="start">
+              <div className="space-y-3">
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Priority</p>
+                  <div className="space-y-1">
+                    {PRIORITY_OPTIONS.map((o) => (
+                      <label key={o.value} className="flex cursor-pointer items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={priorityFilter.has(o.value)}
+                          onCheckedChange={() => toggleInSet(setPriorityFilter, o.value)}
+                        />
+                        {o.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Assignee</p>
+                  <div
+                    className="max-h-40 space-y-1 overflow-y-auto"
+                    onWheel={(e) => (e.currentTarget.scrollTop += e.deltaY)}
+                  >
+                    {members.map((m) => (
+                      <label key={m.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={assigneeFilter.has(m.id)}
+                          onCheckedChange={() => toggleInSet(setAssigneeFilter, m.id)}
+                        />
+                        {m.full_name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                {filterCount > 0 && (
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline hover:text-foreground"
+                    onClick={() => {
+                      setPriorityFilter(new Set());
+                      setAssigneeFilter(new Set());
+                    }}
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant={statusFilter.size > 0 ? "default" : "outline"} size="sm">
+                Status{statusFilter.size > 0 && ` (${statusFilter.size})`}
+                <ChevronDown className="size-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-3" align="start">
+              <div className="space-y-1">
+                {WORKFLOW_STATUS_OPTIONS.map((o) => (
+                  <label key={o.value} className="flex cursor-pointer items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={statusFilter.has(o.value)}
+                      onCheckedChange={() => toggleInSet(setStatusFilter, o.value)}
+                    />
+                    {o.label}
+                  </label>
+                ))}
+                {statusFilter.size > 0 && (
+                  <button
+                    type="button"
+                    className="mt-1 text-xs text-muted-foreground underline hover:text-foreground"
+                    onClick={() => setStatusFilter(new Set())}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant={sortBy !== "default" ? "default" : "outline"} size="sm">
+                {sortBy === "default"
+                  ? "Default"
+                  : sortBy === "priority"
+                    ? "Priority"
+                    : sortBy === "dueDate"
+                      ? "Due Date"
+                      : "Name"}
+                <ChevronDown className="size-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-40 p-1.5" align="start">
+              {(["default", "priority", "dueDate", "name"] as SortBy[]).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className={`flex w-full items-center rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent ${
+                    sortBy === option ? "font-medium text-primary" : ""
+                  }`}
+                  onClick={() => setSortBy(option)}
+                >
+                  {option === "default"
+                    ? "Default"
+                    : option === "priority"
+                      ? "Priority"
+                      : option === "dueDate"
+                        ? "Due Date"
+                        : "Name"}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant={dateType !== "due" ? "default" : "outline"} size="sm">
+                {dateType === "due" ? "Due Date" : "Created Date"}
+                <ChevronDown className="size-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-44 p-1.5" align="start">
+              {(["due", "created"] as TaskDateType[]).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className={`flex w-full items-center rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent ${
+                    dateType === option ? "font-medium text-primary" : ""
+                  }`}
+                  onClick={() => setDateType(option)}
+                >
+                  {option === "due" ? "Due Date" : "Created Date"}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
           <Button variant="outline" size="sm" onClick={toggleSelectionMode}>
             <ListChecks className="size-4" />
             Select
@@ -353,6 +541,7 @@ export function TaskListView({
                     selectable={selectionMode}
                     selected={selectedIds.has(task.id)}
                     onToggleSelect={() => toggleSelect(task.id)}
+                    dateType={dateType}
                   />
                 ))}
             </div>

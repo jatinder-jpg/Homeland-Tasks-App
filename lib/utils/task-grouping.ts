@@ -16,8 +16,11 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+export type TaskDateType = "due" | "created";
+
 export function groupTasksForList(
   tasks: TaskWithAssignee[],
+  dateType: TaskDateType = "due",
 ): Record<TaskGroupKey, TaskWithAssignee[]> {
   const today = todayISO();
   const groups: Record<TaskGroupKey, TaskWithAssignee[]> = {
@@ -33,13 +36,14 @@ export function groupTasksForList(
       groups.pinned.push(task);
       continue;
     }
-    if (!task.due_date) {
+    const date = dateType === "created" ? task.created_at.slice(0, 10) : task.due_date;
+    if (!date) {
       groups.noDate.push(task);
-    } else if (task.due_date === today) {
+    } else if (date === today) {
       groups.today.push(task);
-    } else if (task.due_date < today && task.status !== "done") {
+    } else if (date < today && task.status !== "done") {
       groups.overdue.push(task);
-    } else if (task.due_date > today) {
+    } else if (date > today) {
       groups.upcoming.push(task);
     } else {
       // due in the past but already done
