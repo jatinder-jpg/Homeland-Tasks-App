@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ListChecks, UserCheck, Clock, AlertTriangle, Plus } from "lucide-react";
+import { ListChecks, UserCheck, Clock, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getDashboardCounts, getStatistics, getOrgPriorityBreakdown } from "@/lib/queries/dashboard";
 import { getOrgMembers } from "@/lib/queries/people";
@@ -8,8 +7,7 @@ import { TodaysSummaryCard } from "@/components/dashboard/todays-summary-card";
 import { StatisticsChart } from "@/components/dashboard/statistics-chart";
 import { PriorityTaskSummary } from "@/components/dashboard/priority-task-summary";
 import { TeamIncompleteTask } from "@/components/dashboard/team-incomplete-task";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { AddTaskPrompt } from "@/components/dashboard/add-task-prompt";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -37,20 +35,7 @@ export default async function DashboardPage() {
             <StatCard icon={AlertTriangle} label="Past due tasks" value={counts.pastDue} tint="rose" href="/task?filter=overdue" />
           </div>
 
-          {counts.total === 0 && (
-            <Card className="flex items-center justify-between gap-4 p-5">
-              <div>
-                <p className="font-heading text-base font-semibold">You haven&apos;t added any tasks</p>
-                <p className="text-sm text-muted-foreground">Welcome — let&apos;s get started.</p>
-              </div>
-              <Button asChild>
-                <Link href="/task">
-                  <Plus className="size-4" />
-                  Add Task
-                </Link>
-              </Button>
-            </Card>
-          )}
+          <AddTaskPrompt hasTasks={counts.total > 0} />
 
           <TodaysSummaryCard newTask={counts.newToday} closedTask={counts.closedToday} />
 
