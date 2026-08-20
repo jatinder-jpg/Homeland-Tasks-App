@@ -218,7 +218,7 @@ export function TaskListView({
   const ids = [...selectedIds];
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4 p-6">
+    <div className="w-full space-y-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-heading text-2xl font-bold">Task</h1>
         <div className="flex items-center gap-2">
