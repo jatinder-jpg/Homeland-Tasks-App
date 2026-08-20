@@ -23,7 +23,7 @@ import { PerformanceAnalysisChart } from "@/components/people/performance-analys
 import type { MemberWithCounts } from "@/lib/queries/people";
 import type { StatusWiseRow, ProjectWiseRow, ActivityFeedRow } from "@/lib/queries/reports";
 import type { PresenceEntry } from "@/lib/actions/presence";
-import { formatNumericDate } from "@/lib/utils/format-date";
+import { formatDateTime } from "@/lib/utils/format-date";
 
 type ReportKey =
   | "user-wise"
@@ -221,7 +221,7 @@ export function ReportsView({
                           </span>
                         </td>
                         <td className="px-4 py-2.5 text-muted-foreground">
-                          {lastSeenAt ? formatNumericDate(new Date(lastSeenAt)) : "Never"}
+                          {lastSeenAt ? formatDateTime(new Date(lastSeenAt)) : "Never"}
                         </td>
                       </tr>
                     );
@@ -254,7 +254,7 @@ export function ReportsView({
                         )}
                       </span>
                       <span className="shrink-0 text-xs text-muted-foreground">
-                        {formatNumericDate(new Date(entry.created_at))}
+                        {formatDateTime(new Date(entry.created_at))}
                       </span>
                     </div>
                   ))}

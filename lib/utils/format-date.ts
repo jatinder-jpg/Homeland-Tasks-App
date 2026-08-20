@@ -17,3 +17,12 @@ export function formatShortDate(date: Date): string {
 export function formatNumericDate(date: Date): string {
   return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
 }
+
+/** Deterministic "M/D/YYYY, h:mm AM/PM" formatter, for activity/audit logs. */
+export function formatDateTime(date: Date): string {
+  const hours24 = date.getHours();
+  const period = hours24 >= 12 ? "PM" : "AM";
+  const hours12 = hours24 % 12 || 12;
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return `${formatNumericDate(date)}, ${hours12}:${minutes} ${period}`;
+}

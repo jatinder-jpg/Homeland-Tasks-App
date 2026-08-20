@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AvatarBadge } from "@/components/task/avatar-badge";
 import { getTaskActivityAction, type TaskActivityEntry, type TaskReadReceipt } from "@/lib/actions/task-activity";
-import { formatNumericDate } from "@/lib/utils/format-date";
+import { formatDateTime } from "@/lib/utils/format-date";
 
 const ACTION_LABEL: Record<string, string> = {
   updated: "updated this task",
@@ -41,7 +41,7 @@ export function TaskActivityLog({ taskId, relevantProfileIds }: { taskId: string
             <AvatarBadge name={r.profile?.full_name ?? null} />
             <span className="flex-1 text-sm">{r.profile?.full_name}</span>
             <span className="text-xs text-muted-foreground">
-              {formatNumericDate(new Date(r.read_at))}
+              {formatDateTime(new Date(r.read_at))}
             </span>
           </div>
         ))}
@@ -55,7 +55,7 @@ export function TaskActivityLog({ taskId, relevantProfileIds }: { taskId: string
             <span className="font-medium">{entry.actor?.full_name ?? "Someone"}</span>{" "}
             <span className="text-muted-foreground">{entry.detail || ACTION_LABEL[entry.action] || entry.action}</span>
             <div className="mt-0.5 text-xs text-muted-foreground">
-              {formatNumericDate(new Date(entry.created_at))}
+              {formatDateTime(new Date(entry.created_at))}
             </div>
           </div>
         ))}
