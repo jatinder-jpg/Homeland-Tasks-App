@@ -174,7 +174,7 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
           const isImage = message.attachment?.mime_type?.startsWith("image/");
           return (
             <div key={message.id} className={`flex items-end gap-2 ${isMine ? "flex-row-reverse" : ""}`}>
-              <AvatarBadge name={senderName} />
+              <AvatarBadge name={senderName} profileId={message.sender_id} />
               <div
                 className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
                   isMine ? "bg-primary text-primary-foreground" : "bg-muted"

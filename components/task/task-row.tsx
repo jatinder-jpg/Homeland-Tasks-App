@@ -40,7 +40,7 @@ function AvatarStack({ people }: { people: { id: string; full_name: string }[] }
     <div className="flex shrink-0 -space-x-2">
       {people.slice(0, 3).map((p) => (
         <div key={p.id} className="ring-2 ring-card rounded-full">
-          <AvatarBadge name={p.full_name} />
+          <AvatarBadge name={p.full_name} profileId={p.id} />
         </div>
       ))}
       {people.length > 3 && (
@@ -158,10 +158,12 @@ export function TaskRow({
     }
   }
 
+  const unread = task.hasUnreadComment;
+
   return (
     <div
       onClick={selectable ? onToggleSelect : onClick}
-      className={`flex cursor-pointer items-center gap-3 border-b px-4 py-3 last:border-b-0 hover:bg-accent/50 ${isPending ? "opacity-60" : ""}`}
+      className={`flex cursor-pointer items-center gap-3 border-b px-4 py-3 last:border-b-0 hover:bg-accent/50 ${isPending ? "opacity-60" : ""} ${unread ? "bg-primary/5" : ""}`}
     >
       {selectable && (
         <Checkbox
@@ -197,7 +199,9 @@ export function TaskRow({
             <Repeat className="size-4 shrink-0 text-violet-500" aria-label="Recurring task" />
           )}
 
-          <span className={`min-w-0 flex-1 truncate text-sm ${done ? "text-muted-foreground line-through" : ""}`}>
+          <span
+            className={`min-w-0 flex-1 truncate text-sm ${done ? "text-muted-foreground line-through" : unread ? "font-semibold" : ""}`}
+          >
             {task.name}
           </span>
 
@@ -221,10 +225,14 @@ export function TaskRow({
               e.stopPropagation();
               onClick();
             }}
-            aria-label="Comments"
-            className="shrink-0 text-muted-foreground/60 hover:text-foreground"
+            aria-label={unread ? "Comments (unread)" : "Comments"}
+            title={unread ? "New comment — click to open" : "Comments"}
+            className="relative shrink-0 text-muted-foreground/60 hover:text-foreground"
           >
             <MessageSquare className="size-4" />
+            {unread && (
+              <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-red-500 ring-2 ring-card" />
+            )}
           </button>
         </div>
 

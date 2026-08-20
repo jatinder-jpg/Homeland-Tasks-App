@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { logTaskActivity } from "@/lib/actions/task-activity";
 import type { TaskMessage } from "@/lib/queries/task-comments";
 
 export async function getOrCreateTaskChannelAction(
@@ -79,6 +80,13 @@ export async function sendTaskCommentAction(
       last_message_preview: trimmed.slice(0, 140),
     })
     .eq("id", channelId);
+
+  await logTaskActivity(supabase, {
+    taskId,
+    actorId: user.id,
+    action: "commented",
+    detail: trimmed ? `commented: "${trimmed.slice(0, 140)}"` : "sent an attachment",
+  });
 
   revalidatePath("/task");
   return { success: true };

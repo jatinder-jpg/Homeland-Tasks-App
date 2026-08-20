@@ -251,6 +251,7 @@ export function TaskFormDialog({
   useEffect(() => {
     if (!open) return;
     setDraftTaskId(null);
+    setSidePanelTab("comment");
 
     reset({
       name: task?.name ?? "",

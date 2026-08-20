@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { TopBar } from "@/components/shell/top-bar";
 import { Sidebar } from "@/components/shell/sidebar";
+import { PresenceProvider } from "@/lib/presence/presence-context";
 import type { NotificationWithActor } from "@/lib/queries/notifications";
 
 export function AppShell({
@@ -25,19 +26,21 @@ export function AppShell({
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      <TopBar
-        fullName={fullName}
-        orgCode={orgCode}
-        userId={userId}
-        initialUnreadCount={initialUnreadCount}
-        initialNotifications={initialNotifications}
-        onToggleSidebar={() => setSidebarOpen((v) => !v)}
-      />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar orgName={orgName} open={sidebarOpen} />
-        <main className="flex flex-1 flex-col overflow-y-auto bg-muted/30">{children}</main>
+    <PresenceProvider>
+      <div className="flex h-screen flex-col overflow-hidden">
+        <TopBar
+          fullName={fullName}
+          orgCode={orgCode}
+          userId={userId}
+          initialUnreadCount={initialUnreadCount}
+          initialNotifications={initialNotifications}
+          onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        />
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar orgName={orgName} open={sidebarOpen} />
+          <main className="flex flex-1 flex-col overflow-y-auto bg-muted/30">{children}</main>
+        </div>
       </div>
-    </div>
+    </PresenceProvider>
   );
 }

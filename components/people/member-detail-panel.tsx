@@ -66,7 +66,7 @@ export function MemberDetailPanel({
     <div className="min-w-0 flex-1 space-y-5 overflow-y-auto p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <AvatarBadge name={member.full_name} size="md" />
+          <AvatarBadge name={member.full_name} size="md" profileId={member.id} />
           <div>
             <h2 className="font-semibold">{member.full_name}</h2>
             {isSuperAdmin && !isSelf && member.role !== "super_admin" ? (

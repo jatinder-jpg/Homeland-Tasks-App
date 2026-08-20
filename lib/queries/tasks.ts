@@ -11,6 +11,7 @@ export type TaskWithAssignee = Database["public"]["Tables"]["tp_tasks"]["Row"] &
   creator: { id: string; full_name: string } | null;
   project: { id: string; name: string } | null;
   followers: { id: string; full_name: string }[];
+  hasUnreadComment: boolean;
 };
 
 export type TaskSubtask = Database["public"]["Tables"]["tp_task_subtasks"]["Row"] & {
@@ -45,6 +46,55 @@ async function getRelatedForTasks<T extends { id: string }>(
   return map;
 }
 
+async function getUnreadCommentTaskIds(
+  supabase: SupabaseClient<Database>,
+  taskIds: string[],
+  currentUserId: string,
+): Promise<Set<string>> {
+  const unread = new Set<string>();
+  if (taskIds.length === 0 || !currentUserId) return unread;
+
+  const { data: channels } = await supabase
+    .from("tp_discussion_channels")
+    .select("id, task_id, last_message_at")
+    .eq("type", "task")
+    .in("task_id", taskIds)
+    .not("last_message_at", "is", null);
+
+  const channelRows = (channels ?? []) as { id: string; task_id: string; last_message_at: string }[];
+  if (channelRows.length === 0) return unread;
+
+  const channelIds = channelRows.map((c) => c.id);
+
+  const [{ data: lastMessages }, { data: reads }] = await Promise.all([
+    supabase
+      .from("tp_discussion_messages")
+      .select("channel_id, sender_id, created_at")
+      .in("channel_id", channelIds)
+      .order("created_at", { ascending: false }),
+    supabase.from("tp_task_reads").select("task_id, read_at").eq("profile_id", currentUserId).in("task_id", taskIds),
+  ]);
+
+  const lastSenderByChannel = new Map<string, string>();
+  for (const m of (lastMessages ?? []) as { channel_id: string; sender_id: string; created_at: string }[]) {
+    if (!lastSenderByChannel.has(m.channel_id)) lastSenderByChannel.set(m.channel_id, m.sender_id);
+  }
+
+  const readAtByTask = new Map<string, string>();
+  for (const r of (reads ?? []) as { task_id: string; read_at: string }[]) {
+    readAtByTask.set(r.task_id, r.read_at);
+  }
+
+  for (const channel of channelRows) {
+    const lastSenderId = lastSenderByChannel.get(channel.id);
+    if (!lastSenderId || lastSenderId === currentUserId) continue;
+    const readAt = readAtByTask.get(channel.task_id);
+    if (!readAt || readAt < channel.last_message_at) unread.add(channel.task_id);
+  }
+
+  return unread;
+}
+
 export async function getTasks(
   supabase: SupabaseClient<Database>,
   opts: {
@@ -53,6 +103,7 @@ export async function getTasks(
     recurringOnly?: boolean;
     search?: string;
     projectId?: string;
+    currentUserId?: string;
   } = {},
 ): Promise<TaskWithAssignee[]> {
   let query = supabase
@@ -84,7 +135,7 @@ export async function getTasks(
   const tasks = (data ?? []) as unknown as TaskWithAssignee[];
   const taskIds = tasks.map((t) => t.id);
 
-  const [assigneesByTask, departmentsByTask, followersByTask] = await Promise.all([
+  const [assigneesByTask, departmentsByTask, followersByTask, unreadCommentTaskIds] = await Promise.all([
     getRelatedForTasks<{ id: string; full_name: string }>(
       supabase,
       "tp_task_assignees",
@@ -103,6 +154,7 @@ export async function getTasks(
       "tp_profiles(id, full_name)",
       taskIds,
     ),
+    getUnreadCommentTaskIds(supabase, taskIds, opts.currentUserId ?? ""),
   ]);
 
   return tasks.map((t) => ({
@@ -110,6 +162,7 @@ export async function getTasks(
     assignees: assigneesByTask.get(t.id) ?? [],
     departments: departmentsByTask.get(t.id) ?? [],
     followers: followersByTask.get(t.id) ?? [],
+    hasUnreadComment: unreadCommentTaskIds.has(t.id),
   }));
 }
 
@@ -170,5 +223,6 @@ export async function getTaskDetail(
     subtasks: (subtasks ?? []) as unknown as TaskSubtask[],
     checklist: (checklist ?? []) as unknown as TaskChecklistItem[],
     customFieldValues,
+    hasUnreadComment: false,
   };
 }

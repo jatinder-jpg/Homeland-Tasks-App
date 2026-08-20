@@ -12,6 +12,8 @@ const ACTION_LABEL: Record<string, string> = {
   unarchived: "unarchived this task",
   completed: "marked this task complete",
   reopened: "reopened this task",
+  opened: "opened this task",
+  commented: "commented on this task",
 };
 
 export function TaskActivityLog({ taskId, relevantProfileIds }: { taskId: string; relevantProfileIds: string[] }) {

@@ -1477,6 +1477,39 @@ export type Database = {
           },
         ]
       }
+      tp_user_presence: {
+        Row: {
+          last_seen_at: string
+          organization_id: string
+          profile_id: string
+        }
+        Insert: {
+          last_seen_at?: string
+          organization_id: string
+          profile_id: string
+        }
+        Update: {
+          last_seen_at?: string
+          organization_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tp_user_presence_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "tp_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tp_user_presence_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "tp_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       tp_create_organization_and_admin: {

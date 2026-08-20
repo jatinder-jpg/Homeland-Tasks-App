@@ -8,7 +8,9 @@ export type TaskActivityAction =
   | "archived"
   | "unarchived"
   | "completed"
-  | "reopened";
+  | "reopened"
+  | "opened"
+  | "commented";
 
 export type TaskActivityEntry = {
   id: string;
@@ -57,6 +59,8 @@ export async function markTaskReadAction(taskId: string) {
       { task_id: taskId, profile_id: user.id, read_at: new Date().toISOString() },
       { onConflict: "task_id,profile_id" },
     );
+
+  await logTaskActivity(supabase, { taskId, actorId: user.id, action: "opened" });
 }
 
 export async function getTaskActivityAction(

@@ -6,12 +6,16 @@ import { TaskListView } from "@/components/task/task-list-view";
 
 export default async function TaskPage() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const currentUserId = user?.id ?? "";
 
   const [tasks, draftTasks, archivedTasks, recurringTasks, members, projects] = await Promise.all([
-    getTasks(supabase, { includeDrafts: false }),
-    getTasks(supabase, { includeDrafts: true }),
-    getTasks(supabase, { archivedOnly: true }),
-    getTasks(supabase, { recurringOnly: true }),
+    getTasks(supabase, { includeDrafts: false, currentUserId }),
+    getTasks(supabase, { includeDrafts: true, currentUserId }),
+    getTasks(supabase, { archivedOnly: true, currentUserId }),
+    getTasks(supabase, { recurringOnly: true, currentUserId }),
     getOrgMembersAction(),
     getOrgProjectsAction(),
   ]);

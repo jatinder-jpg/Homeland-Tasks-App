@@ -46,7 +46,7 @@ export function PeopleDirectory({
               selectedId === member.id ? "bg-primary/10" : ""
             }`}
           >
-            <AvatarBadge name={member.full_name} />
+            <AvatarBadge name={member.full_name} profileId={member.id} />
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{member.full_name}</p>
               <p className="truncate text-xs text-muted-foreground">{ROLE_LABEL[member.role] ?? member.role}</p>

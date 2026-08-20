@@ -62,3 +62,25 @@ export async function getProjectWiseReport(supabase: SupabaseClient<Database>): 
     };
   });
 }
+
+export type ActivityFeedRow = {
+  id: string;
+  action: string;
+  detail: string | null;
+  created_at: string;
+  actor: { id: string; full_name: string } | null;
+  task: { id: string; name: string } | null;
+};
+
+export async function getOrgActivityFeed(
+  supabase: SupabaseClient<Database>,
+  opts: { limit?: number } = {},
+): Promise<ActivityFeedRow[]> {
+  const { data, error } = await supabase
+    .from("tp_task_activity_log")
+    .select("id, action, detail, created_at, actor:tp_profiles(id, full_name), task:tp_tasks(id, name)")
+    .order("created_at", { ascending: false })
+    .limit(opts.limit ?? 100);
+  if (error) throw error;
+  return (data ?? []) as unknown as ActivityFeedRow[];
+}

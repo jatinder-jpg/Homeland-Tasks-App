@@ -21,7 +21,9 @@ import {
 } from "@/components/ui/select";
 import { PerformanceAnalysisChart } from "@/components/people/performance-analysis-chart";
 import type { MemberWithCounts } from "@/lib/queries/people";
-import type { StatusWiseRow, ProjectWiseRow } from "@/lib/queries/reports";
+import type { StatusWiseRow, ProjectWiseRow, ActivityFeedRow } from "@/lib/queries/reports";
+import type { PresenceEntry } from "@/lib/actions/presence";
+import { formatNumericDate } from "@/lib/utils/format-date";
 
 type ReportKey =
   | "user-wise"
@@ -36,7 +38,7 @@ const TILES: { key: ReportKey; label: string; icon: typeof User; functional: boo
   { key: "user-wise", label: "User Wise Report", icon: User, functional: true },
   { key: "project-wise", label: "Project Wise Report", icon: Briefcase, functional: true },
   { key: "status-wise", label: "Status Wise Report", icon: ListChecks, functional: true },
-  { key: "user-activity", label: "User Activity Report", icon: Activity, functional: false },
+  { key: "user-activity", label: "User Activity Report", icon: Activity, functional: true },
   { key: "user-activity-summary", label: "User Activity Summary", icon: Clock3, functional: false },
   { key: "user-wise-performance", label: "User Wise Performance", icon: TrendingUp, functional: true },
   { key: "daily-report", label: "Daily Report", icon: CalendarDays, functional: false },
@@ -48,17 +50,56 @@ const STATUS_LABELS: Record<string, string> = {
   done: "Done",
 };
 
+const ACTIVITY_ACTION_LABEL: Record<string, string> = {
+  updated: "updated",
+  status_changed: "changed status on",
+  archived: "archived",
+  unarchived: "unarchived",
+  completed: "completed",
+  reopened: "reopened",
+  opened: "opened",
+  commented: "commented on",
+};
+
+const ONLINE_THRESHOLD_MS = 45_000;
+const IDLE_THRESHOLD_MS = 5 * 60_000;
+
+function presenceStatus(lastSeenAt: string | undefined): "online" | "idle" | "offline" {
+  if (!lastSeenAt) return "offline";
+  const elapsed = Date.now() - new Date(lastSeenAt).getTime();
+  if (elapsed <= ONLINE_THRESHOLD_MS) return "online";
+  if (elapsed <= IDLE_THRESHOLD_MS) return "idle";
+  return "offline";
+}
+
+const PRESENCE_DOT: Record<string, string> = {
+  online: "bg-emerald-500",
+  idle: "bg-amber-400",
+  offline: "bg-muted-foreground/30",
+};
+
+const PRESENCE_LABEL: Record<string, string> = {
+  online: "Online",
+  idle: "Idle",
+  offline: "Offline",
+};
+
 export function ReportsView({
   members,
   statusWise,
   projectWise,
+  activityFeed,
+  presence,
 }: {
   members: MemberWithCounts[];
   statusWise: StatusWiseRow[];
   projectWise: ProjectWiseRow[];
+  activityFeed: ActivityFeedRow[];
+  presence: PresenceEntry[];
 }) {
   const [active, setActive] = useState<ReportKey | null>(null);
   const [performanceMemberId, setPerformanceMemberId] = useState(members[0]?.id ?? "");
+  const lastSeenByMember = new Map(presence.map((p) => [p.profileId, p.lastSeenAt]));
 
   if (active) {
     const tile = TILES.find((t) => t.key === active)!;
@@ -150,6 +191,77 @@ export function ReportsView({
               })
             )}
           </Card>
+        )}
+
+        {active === "user-activity" && (
+          <div className="space-y-6">
+            <Card className="overflow-hidden p-0">
+              <div className="border-b bg-muted/20 px-4 py-2.5 text-xs font-medium text-muted-foreground">
+                Who&apos;s Online
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs text-muted-foreground">
+                    <th className="px-4 py-2 font-medium">User</th>
+                    <th className="px-4 py-2 font-medium">Status</th>
+                    <th className="px-4 py-2 font-medium">Last Seen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map((m) => {
+                    const lastSeenAt = lastSeenByMember.get(m.id);
+                    const status = presenceStatus(lastSeenAt);
+                    return (
+                      <tr key={m.id} className="border-b last:border-b-0">
+                        <td className="px-4 py-2.5">{m.full_name}</td>
+                        <td className="px-4 py-2.5">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className={`size-2 rounded-full ${PRESENCE_DOT[status]}`} />
+                            {PRESENCE_LABEL[status]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-muted-foreground">
+                          {lastSeenAt ? formatNumericDate(new Date(lastSeenAt)) : "Never"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </Card>
+
+            <Card className="overflow-hidden p-0">
+              <div className="border-b bg-muted/20 px-4 py-2.5 text-xs font-medium text-muted-foreground">
+                Activity Log — task opens, replies, and status changes
+              </div>
+              {activityFeed.length === 0 ? (
+                <div className="p-10 text-center text-sm text-muted-foreground">No activity yet.</div>
+              ) : (
+                <div className="max-h-[28rem] divide-y overflow-y-auto">
+                  {activityFeed.map((entry) => (
+                    <div key={entry.id} className="flex items-start justify-between gap-3 px-4 py-2.5 text-sm">
+                      <span>
+                        <span className="font-medium">{entry.actor?.full_name ?? "Someone"}</span>{" "}
+                        <span className="text-muted-foreground">
+                          {entry.detail || ACTIVITY_ACTION_LABEL[entry.action] || entry.action}
+                        </span>
+                        {entry.task && (
+                          <>
+                            {" "}
+                            <span className="text-muted-foreground">on</span>{" "}
+                            <span className="font-medium">{entry.task.name}</span>
+                          </>
+                        )}
+                      </span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {formatNumericDate(new Date(entry.created_at))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
         )}
 
         {active === "user-wise-performance" && (
