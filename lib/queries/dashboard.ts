@@ -72,6 +72,25 @@ export async function getDashboardCounts(
   };
 }
 
+export type PriorityCounts = { low: number; medium: number; high: number; total: number };
+
+export async function getOrgPriorityBreakdown(supabase: SupabaseClient<Database>): Promise<PriorityCounts> {
+  const { data } = await supabase
+    .from("tp_tasks")
+    .select("priority")
+    .eq("is_draft", false)
+    .eq("is_archived", false);
+
+  const counts = { low: 0, medium: 0, high: 0, total: 0 };
+  for (const row of (data ?? []) as { priority: string }[]) {
+    counts.total += 1;
+    if (row.priority === "low") counts.low += 1;
+    else if (row.priority === "medium") counts.medium += 1;
+    else if (row.priority === "high") counts.high += 1;
+  }
+  return counts;
+}
+
 export type MonthlyStatRow = {
   period: string;
   completed: number;
