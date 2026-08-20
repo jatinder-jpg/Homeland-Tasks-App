@@ -58,7 +58,7 @@ const ACTIVITY_ACTION_LABEL: Record<string, string> = {
   completed: "completed",
   reopened: "reopened",
   opened: "opened",
-  commented: "commented on",
+  commented: "commented",
 };
 
 const ONLINE_THRESHOLD_MS = 45_000;

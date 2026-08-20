@@ -85,7 +85,6 @@ export async function sendTaskCommentAction(
     taskId,
     actorId: user.id,
     action: "commented",
-    detail: trimmed ? `commented: "${trimmed.slice(0, 140)}"` : "sent an attachment",
   });
 
   revalidatePath("/task");
