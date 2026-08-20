@@ -8,6 +8,7 @@ import { AvatarBadge } from "@/components/task/avatar-badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatShortDate } from "@/lib/utils/format-date";
 import type { TaskWithAssignee } from "@/lib/queries/tasks";
+import { DEFAULT_COLUMNS, buildGridTemplate, type ColumnKey } from "@/lib/utils/task-columns";
 
 const PRIORITY_COLOR: Record<string, string> = {
   high: "text-red-500 fill-red-500",
@@ -33,6 +34,24 @@ const STATUS_COLOR: Record<string, string> = {
   under_review: "bg-blue-500",
 };
 
+function AvatarStack({ people }: { people: { id: string; full_name: string }[] }) {
+  if (people.length === 0) return <AvatarBadge name={null} />;
+  return (
+    <div className="flex shrink-0 -space-x-2">
+      {people.slice(0, 3).map((p) => (
+        <div key={p.id} className="ring-2 ring-card rounded-full">
+          <AvatarBadge name={p.full_name} />
+        </div>
+      ))}
+      {people.length > 3 && (
+        <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground ring-2 ring-card">
+          +{people.length - 3}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function TaskRow({
   task,
   onClick,
@@ -40,6 +59,8 @@ export function TaskRow({
   selected,
   onToggleSelect,
   dateType = "due",
+  columns = DEFAULT_COLUMNS,
+  gridTemplate,
 }: {
   task: TaskWithAssignee;
   onClick: () => void;
@@ -47,7 +68,10 @@ export function TaskRow({
   selected?: boolean;
   onToggleSelect?: () => void;
   dateType?: "due" | "created";
+  columns?: ColumnKey[];
+  gridTemplate?: string;
 }) {
+  const resolvedGridTemplate = gridTemplate ?? buildGridTemplate(columns);
   const [isPending, startTransition] = useTransition();
   const done = task.status === "done";
   const today = new Date().toISOString().slice(0, 10);
@@ -69,12 +93,70 @@ export function TaskRow({
     });
   }
 
-  const dateLabel =
+  const dueDateLabel =
     dateType === "created"
       ? formatShortDate(new Date(task.created_at))
       : task.due_date
         ? formatShortDate(new Date(task.due_date + "T00:00:00"))
         : null;
+
+  function renderColumn(key: ColumnKey) {
+    switch (key) {
+      case "dueDate":
+        return (
+          <span
+            key={key}
+            className={`text-xs ${isOverdue ? "font-medium text-destructive" : "text-muted-foreground"}`}
+          >
+            {dueDateLabel ?? "—"}
+          </span>
+        );
+      case "assignees":
+        return <AvatarStack key={key} people={task.assignees} />;
+      case "follower":
+        return <AvatarStack key={key} people={task.followers} />;
+      case "status":
+        return task.workflow_status ? (
+          <span
+            key={key}
+            className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
+          >
+            <span
+              className={`size-1.5 shrink-0 rounded-full ${STATUS_COLOR[task.workflow_status] ?? "bg-muted-foreground"}`}
+            />
+            {STATUS_LABEL[task.workflow_status] ?? task.workflow_status}
+          </span>
+        ) : (
+          <span key={key} />
+        );
+      case "project":
+        return (
+          <span key={key} className="truncate text-xs text-muted-foreground">
+            {task.project?.name ?? "—"}
+          </span>
+        );
+      case "service":
+        return (
+          <span key={key} className="truncate text-xs text-muted-foreground">
+            {task.service?.name ?? "—"}
+          </span>
+        );
+      case "client":
+        return (
+          <span key={key} className="truncate text-xs text-muted-foreground">
+            {task.client?.name ?? "—"}
+          </span>
+        );
+      case "createdDate":
+        return (
+          <span key={key} className="text-xs text-muted-foreground">
+            {formatShortDate(new Date(task.created_at))}
+          </span>
+        );
+      default:
+        return <span key={key} />;
+    }
+  }
 
   return (
     <div
@@ -89,7 +171,7 @@ export function TaskRow({
         />
       )}
 
-      <div className="grid flex-1 grid-cols-[minmax(0,1fr)_110px_130px_130px] items-center gap-3">
+      <div className="grid flex-1 items-center gap-3" style={{ gridTemplateColumns: resolvedGridTemplate }}>
         <div className="flex min-w-0 items-center gap-3">
           <button onClick={toggleComplete} aria-label={done ? "Mark incomplete" : "Mark complete"}>
             {done ? (
@@ -146,35 +228,7 @@ export function TaskRow({
           </button>
         </div>
 
-        <span className={`text-xs ${isOverdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
-          {dateLabel ?? "—"}
-        </span>
-
-        {task.assignees.length === 0 ? (
-          <AvatarBadge name={null} />
-        ) : (
-          <div className="flex shrink-0 -space-x-2">
-            {task.assignees.slice(0, 3).map((a) => (
-              <div key={a.id} className="ring-2 ring-card rounded-full">
-                <AvatarBadge name={a.full_name} />
-              </div>
-            ))}
-            {task.assignees.length > 3 && (
-              <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground ring-2 ring-card">
-                +{task.assignees.length - 3}
-              </span>
-            )}
-          </div>
-        )}
-
-        {task.workflow_status ? (
-          <span className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-            <span className={`size-1.5 shrink-0 rounded-full ${STATUS_COLOR[task.workflow_status] ?? "bg-muted-foreground"}`} />
-            {STATUS_LABEL[task.workflow_status] ?? task.workflow_status}
-          </span>
-        ) : (
-          <span />
-        )}
+        {columns.map(renderColumn)}
       </div>
     </div>
   );

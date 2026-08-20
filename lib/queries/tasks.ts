@@ -9,6 +9,8 @@ export type TaskWithAssignee = Database["public"]["Tables"]["tp_tasks"]["Row"] &
   client: { id: string; name: string } | null;
   service: { id: string; name: string } | null;
   creator: { id: string; full_name: string } | null;
+  project: { id: string; name: string } | null;
+  followers: { id: string; full_name: string }[];
 };
 
 export type TaskSubtask = Database["public"]["Tables"]["tp_task_subtasks"]["Row"] & {
@@ -25,7 +27,7 @@ export type TaskDetail = TaskWithAssignee & {
 
 async function getRelatedForTasks<T extends { id: string }>(
   supabase: SupabaseClient<Database>,
-  table: "tp_task_assignees" | "tp_task_departments",
+  table: "tp_task_assignees" | "tp_task_departments" | "tp_task_followers",
   embed: string,
   taskIds: string[],
 ): Promise<Map<string, T[]>> {
@@ -56,7 +58,7 @@ export async function getTasks(
   let query = supabase
     .from("tp_tasks")
     .select(
-      "*, assignee:tp_profiles!tp_tasks_assignee_id_fkey(id, full_name), department:tp_departments!tp_tasks_department_id_fkey(id, name), client:tp_clients(id, name), service:tp_services(id, name), creator:tp_profiles!tp_tasks_created_by_fkey(id, full_name)",
+      "*, assignee:tp_profiles!tp_tasks_assignee_id_fkey(id, full_name), department:tp_departments!tp_tasks_department_id_fkey(id, name), client:tp_clients(id, name), service:tp_services(id, name), creator:tp_profiles!tp_tasks_created_by_fkey(id, full_name), project:tp_projects(id, name)",
     )
     .order("position", { ascending: true })
     .order("created_at", { ascending: false });
@@ -82,7 +84,7 @@ export async function getTasks(
   const tasks = (data ?? []) as unknown as TaskWithAssignee[];
   const taskIds = tasks.map((t) => t.id);
 
-  const [assigneesByTask, departmentsByTask] = await Promise.all([
+  const [assigneesByTask, departmentsByTask, followersByTask] = await Promise.all([
     getRelatedForTasks<{ id: string; full_name: string }>(
       supabase,
       "tp_task_assignees",
@@ -95,12 +97,19 @@ export async function getTasks(
       "tp_departments(id, name)",
       taskIds,
     ),
+    getRelatedForTasks<{ id: string; full_name: string }>(
+      supabase,
+      "tp_task_followers",
+      "tp_profiles(id, full_name)",
+      taskIds,
+    ),
   ]);
 
   return tasks.map((t) => ({
     ...t,
     assignees: assigneesByTask.get(t.id) ?? [],
     departments: departmentsByTask.get(t.id) ?? [],
+    followers: followersByTask.get(t.id) ?? [],
   }));
 }
 
@@ -120,7 +129,7 @@ export async function getTaskDetail(
     supabase
       .from("tp_tasks")
       .select(
-        "*, assignee:tp_profiles!tp_tasks_assignee_id_fkey(id, full_name), department:tp_departments!tp_tasks_department_id_fkey(id, name), client:tp_clients(id, name), service:tp_services(id, name), creator:tp_profiles!tp_tasks_created_by_fkey(id, full_name)",
+        "*, assignee:tp_profiles!tp_tasks_assignee_id_fkey(id, full_name), department:tp_departments!tp_tasks_department_id_fkey(id, name), client:tp_clients(id, name), service:tp_services(id, name), creator:tp_profiles!tp_tasks_created_by_fkey(id, full_name), project:tp_projects(id, name)",
       )
       .eq("id", taskId)
       .single(),

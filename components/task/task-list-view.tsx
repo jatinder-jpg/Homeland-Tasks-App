@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
@@ -44,6 +45,7 @@ import {
   bulkDeleteAction,
 } from "@/lib/actions/tasks";
 import type { TaskWithAssignee } from "@/lib/queries/tasks";
+import { COLUMN_DEFS, DEFAULT_COLUMNS, buildGridTemplate, type ColumnKey } from "@/lib/utils/task-columns";
 
 const WORKFLOW_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "pending", label: "Pending" },
@@ -93,6 +95,7 @@ export function TaskListView({
   const [assigneeFilter, setAssigneeFilter] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<SortBy>("default");
   const [dateType, setDateType] = useState<TaskDateType>("due");
+  const [activeColumns, setActiveColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -190,6 +193,15 @@ export function TaskListView({
     toast.info(`${feature} is coming soon`);
   }
 
+  function toggleColumn(key: ColumnKey) {
+    setActiveColumns((prev) => {
+      const next = prev.includes(key) ? prev.filter((c) => c !== key) : [...prev, key];
+      return COLUMN_DEFS.filter((c) => next.includes(c.key)).map((c) => c.key);
+    });
+  }
+
+  const gridTemplate = useMemo(() => buildGridTemplate(activeColumns), [activeColumns]);
+
   function csvCell(value: string) {
     return `"${value.replace(/"/g, '""')}"`;
   }
@@ -268,10 +280,28 @@ export function TaskListView({
           >
             Recurring {recurringTasks.length > 0 && `(${recurringTasks.length})`}
           </Button>
-          <Button variant="outline" size="sm">
-            <SlidersHorizontal className="size-4" />
-            Customize
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <SlidersHorizontal className="size-4" />
+                Customize
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-60 p-3" align="end">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">Customize Field</p>
+              <div className="space-y-2.5">
+                {COLUMN_DEFS.map((col) => (
+                  <label key={col.key} className="flex cursor-pointer items-center justify-between text-sm">
+                    {col.label}
+                    <Switch
+                      checked={activeColumns.includes(col.key)}
+                      onCheckedChange={() => toggleColumn(col.key)}
+                    />
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="More">
@@ -561,11 +591,14 @@ export function TaskListView({
       <TaskViewTabs />
 
       <div className="overflow-hidden rounded-lg border bg-card">
-        <div className="grid grid-cols-[minmax(0,1fr)_110px_130px_130px] items-center gap-3 border-b bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground">
+        <div
+          className="grid items-center gap-3 border-b bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground"
+          style={{ gridTemplateColumns: gridTemplate }}
+        >
           <span>Task Name</span>
-          <span>Due Date</span>
-          <span>Assignee(s)</span>
-          <span>Status</span>
+          {activeColumns.map((key) => (
+            <span key={key}>{COLUMN_DEFS.find((c) => c.key === key)?.label}</span>
+          ))}
         </div>
 
         {filtered.length === 0 && (
@@ -582,7 +615,6 @@ export function TaskListView({
 
         {GROUP_ORDER.map((key) => {
           const items = groups[key];
-          if (items.length === 0) return null;
           const isCollapsed = collapsed[key];
 
           return (
@@ -609,6 +641,8 @@ export function TaskListView({
                     selected={selectedIds.has(task.id)}
                     onToggleSelect={() => toggleSelect(task.id)}
                     dateType={dateType}
+                    columns={activeColumns}
+                    gridTemplate={gridTemplate}
                   />
                 ))}
             </div>
