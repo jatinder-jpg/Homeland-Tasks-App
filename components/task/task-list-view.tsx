@@ -26,6 +26,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { TaskViewTabs } from "@/components/task/task-view-tabs";
 import { TaskRow } from "@/components/task/task-row";
 import { TaskFormDialog } from "@/components/task/task-form-dialog";
@@ -179,6 +186,34 @@ export function TaskListView({
     setSelectedIds(new Set());
   }
 
+  function comingSoon(feature: string) {
+    toast.info(`${feature} is coming soon`);
+  }
+
+  function csvCell(value: string) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+
+  function handleBulkExport() {
+    const header = ["Task Name", "Status", "Priority", "Due Date", "Assignees"];
+    const rows = filtered.map((t) => [
+      csvCell(t.name),
+      csvCell(t.status),
+      csvCell(t.priority),
+      csvCell(t.due_date ?? ""),
+      csvCell(t.assignees.map((a) => a.full_name).join("; ")),
+    ]);
+    const csv = [header.map(csvCell).join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `tasks-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("Tasks exported");
+  }
+
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -237,9 +272,38 @@ export function TaskListView({
             <SlidersHorizontal className="size-4" />
             Customize
           </Button>
-          <Button variant="ghost" size="icon" aria-label="More">
-            <MoreHorizontal className="size-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="More">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onSelect={toggleSelectionMode}>Bulk Edit</DropdownMenuItem>
+              <DropdownMenuItem onSelect={handleBulkExport}>Bulk Export</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => comingSoon("Bulk Import")}>
+                Bulk Import
+                <span className="ml-auto text-xs text-muted-foreground">Soon</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => comingSoon("Import Draft Tasks")}>
+                Import Draft Tasks
+                <span className="ml-auto text-xs text-muted-foreground">Soon</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => comingSoon("Primary Recurring Tasks")}>
+                Primary Recurring Tasks
+                <span className="ml-auto text-xs text-muted-foreground">Soon</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => comingSoon("Quick Reply")}>
+                Quick Reply
+                <span className="ml-auto text-xs text-muted-foreground">Soon</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => comingSoon("Workflow Management")}>
+                Workflow Management
+                <span className="ml-auto text-xs text-muted-foreground">Beta</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
