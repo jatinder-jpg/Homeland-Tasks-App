@@ -86,7 +86,7 @@ export function DocumentsView({
   return (
     <div className="flex h-full min-w-0">
       <div className="flex w-56 shrink-0 flex-col gap-1 border-r p-4">
-        <h1 className="mb-2 text-lg font-bold">Documents</h1>
+        <h1 className="mb-2 font-heading text-lg font-bold">Documents</h1>
         {scopeItems.map(({ key, label, icon: Icon }) => (
           <button
             key={key}

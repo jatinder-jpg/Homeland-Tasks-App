@@ -165,7 +165,7 @@ export function TaskKanbanView({
   return (
     <div className="flex h-full flex-col gap-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Task</h1>
+        <h1 className="font-heading text-2xl font-bold">Task</h1>
         <Button size="sm" onClick={openCreate}>
           <Plus className="size-4" />
           Add Task
