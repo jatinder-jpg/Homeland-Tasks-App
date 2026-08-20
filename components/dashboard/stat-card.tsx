@@ -16,23 +16,21 @@ export function StatCard({
   href?: string;
 }) {
   const tints: Record<typeof tint, string> = {
-    blue: "bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400",
-    green: "bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400",
-    amber: "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400",
-    rose: "bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-400",
+    blue: "text-primary",
+    green: "text-emerald-600 dark:text-emerald-400",
+    amber: "text-amber-600 dark:text-amber-400",
+    rose: "text-destructive",
   };
 
   const card = (
     <Card
-      className={`flex flex-row items-center gap-4 p-5 ${href ? "transition-colors hover:border-primary/40 hover:ring-primary/20" : ""}`}
+      className={`p-4 ${href ? "transition-colors hover:border-primary/40" : ""}`}
     >
-      <div className={`flex size-12 shrink-0 items-center justify-center rounded-xl ${tints[tint]}`}>
-        <Icon className="size-6" />
+      <div className="mb-2 flex items-center gap-2 overflow-hidden">
+        <Icon className={`size-4 shrink-0 ${tints[tint]}`} />
+        <p className="truncate text-sm text-muted-foreground">{label}</p>
       </div>
-      <div>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-2xl font-bold">{value}</p>
-      </div>
+      <p className="font-heading text-2xl font-semibold">{value}</p>
     </Card>
   );
 
