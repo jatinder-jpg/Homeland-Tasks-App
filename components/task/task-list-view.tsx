@@ -155,16 +155,6 @@ export function TaskListView({
 
   const groups = useMemo(() => groupTasksForList(filtered, dateType), [filtered, dateType]);
 
-  const stats = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    return {
-      total: tasks.length,
-      overdue: tasks.filter((t) => t.due_date && t.due_date < today && t.status !== "done").length,
-      inProgress: tasks.filter((t) => t.workflow_status === "in_progress").length,
-      completed: tasks.filter((t) => t.status === "done").length,
-    };
-  }, [tasks]);
-
   function toggleInSet(setState: (fn: (prev: Set<string>) => Set<string>) => void, value: string) {
     setState((prev) => {
       const next = new Set(prev);
@@ -252,35 +242,6 @@ export function TaskListView({
           </Button>
         </div>
       </div>
-
-      {view === "active" && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-md border border-t-2 border-t-primary bg-card px-4 py-3">
-            <div className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-              Total Active
-            </div>
-            <div className="font-heading text-2xl font-semibold">{stats.total}</div>
-          </div>
-          <div className="rounded-md border border-t-2 border-t-destructive bg-card px-4 py-3">
-            <div className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-              Overdue
-            </div>
-            <div className="font-heading text-2xl font-semibold text-destructive">{stats.overdue}</div>
-          </div>
-          <div className="rounded-md border border-t-2 border-t-fuchsia-600 bg-card px-4 py-3">
-            <div className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-              In Progress
-            </div>
-            <div className="font-heading text-2xl font-semibold">{stats.inProgress}</div>
-          </div>
-          <div className="rounded-md border border-t-2 border-t-[var(--brand-gold)] bg-card px-4 py-3">
-            <div className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-              Completed
-            </div>
-            <div className="font-heading text-2xl font-semibold">{stats.completed}</div>
-          </div>
-        </div>
-      )}
 
       {selectionMode ? (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
@@ -536,8 +497,11 @@ export function TaskListView({
       <TaskViewTabs />
 
       <div className="overflow-hidden rounded-lg border bg-card">
-        <div className="border-b bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground">
-          Task Name
+        <div className="grid grid-cols-[minmax(0,1fr)_110px_130px_130px] items-center gap-3 border-b bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground">
+          <span>Task Name</span>
+          <span>Due Date</span>
+          <span>Assignee(s)</span>
+          <span>Status</span>
         </div>
 
         {filtered.length === 0 && (

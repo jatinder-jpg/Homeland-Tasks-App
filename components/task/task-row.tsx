@@ -50,6 +50,8 @@ export function TaskRow({
 }) {
   const [isPending, startTransition] = useTransition();
   const done = task.status === "done";
+  const today = new Date().toISOString().slice(0, 10);
+  const isOverdue = Boolean(task.due_date && task.due_date < today && !done);
 
   function toggleComplete(e: React.MouseEvent) {
     e.stopPropagation();
@@ -67,6 +69,13 @@ export function TaskRow({
     });
   }
 
+  const dateLabel =
+    dateType === "created"
+      ? formatShortDate(new Date(task.created_at))
+      : task.due_date
+        ? formatShortDate(new Date(task.due_date + "T00:00:00"))
+        : null;
+
   return (
     <div
       onClick={selectable ? onToggleSelect : onClick}
@@ -80,95 +89,93 @@ export function TaskRow({
         />
       )}
 
-      <button onClick={toggleComplete} aria-label={done ? "Mark incomplete" : "Mark complete"}>
-        {done ? (
-          <CheckCircle2 className="size-5 text-emerald-500" />
-        ) : (
-          <Circle className="size-5 text-muted-foreground" />
-        )}
-      </button>
+      <div className="grid flex-1 grid-cols-[minmax(0,1fr)_110px_130px_130px] items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <button onClick={toggleComplete} aria-label={done ? "Mark incomplete" : "Mark complete"}>
+            {done ? (
+              <CheckCircle2 className="size-5 shrink-0 text-emerald-500" />
+            ) : (
+              <Circle className="size-5 shrink-0 text-muted-foreground" />
+            )}
+          </button>
 
-      <button onClick={togglePin} aria-label={task.is_pinned ? "Unpin" : "Pin"}>
-        <Pin
-          className={`size-4 ${task.is_pinned ? "fill-primary text-primary" : "text-muted-foreground/40"}`}
-        />
-      </button>
+          <button onClick={togglePin} aria-label={task.is_pinned ? "Unpin" : "Pin"}>
+            <Pin
+              className={`size-4 shrink-0 ${task.is_pinned ? "fill-primary text-primary" : "text-muted-foreground/40"}`}
+            />
+          </button>
 
-      <Flag className={`size-4 shrink-0 ${PRIORITY_COLOR[task.priority] ?? ""}`} />
+          <Flag className={`size-4 shrink-0 ${PRIORITY_COLOR[task.priority] ?? ""}`} />
 
-      {task.site_visit && (
-        <MapPin className="size-4 shrink-0 text-sky-500" aria-label="Site visit required" />
-      )}
-
-      {task.is_recurring && (
-        <Repeat className="size-4 shrink-0 text-violet-500" aria-label="Recurring task" />
-      )}
-
-      <span className={`flex-1 truncate text-sm ${done ? "text-muted-foreground line-through" : ""}`}>
-        {task.name}
-      </span>
-
-      {task.departments.length > 0 && (
-        <span className="hidden shrink-0 gap-1 sm:flex">
-          {task.departments.slice(0, 2).map((d) => (
-            <span key={d.id} className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-              {d.name}
-            </span>
-          ))}
-          {task.departments.length > 2 && (
-            <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-              +{task.departments.length - 2}
-            </span>
+          {task.site_visit && (
+            <MapPin className="size-4 shrink-0 text-sky-500" aria-label="Site visit required" />
           )}
-        </span>
-      )}
 
-      {task.workflow_status && (
-        <span className="hidden shrink-0 items-center gap-1.5 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground sm:inline-flex">
-          <span className={`size-1.5 shrink-0 rounded-full ${STATUS_COLOR[task.workflow_status] ?? "bg-muted-foreground"}`} />
-          {STATUS_LABEL[task.workflow_status] ?? task.workflow_status}
-        </span>
-      )}
-
-      {task.assignees.length === 0 ? (
-        <AvatarBadge name={null} />
-      ) : (
-        <div className="flex shrink-0 -space-x-2">
-          {task.assignees.slice(0, 3).map((a) => (
-            <div key={a.id} className="ring-2 ring-card rounded-full">
-              <AvatarBadge name={a.full_name} />
-            </div>
-          ))}
-          {task.assignees.length > 3 && (
-            <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground ring-2 ring-card">
-              +{task.assignees.length - 3}
-            </span>
+          {task.is_recurring && (
+            <Repeat className="size-4 shrink-0 text-violet-500" aria-label="Recurring task" />
           )}
-        </div>
-      )}
 
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick();
-        }}
-        aria-label="Comments"
-        className="shrink-0 text-muted-foreground/60 hover:text-foreground"
-      >
-        <MessageSquare className="size-4" />
-      </button>
-
-      {dateType === "created" ? (
-        <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
-          {formatShortDate(new Date(task.created_at))}
-        </span>
-      ) : (
-        task.due_date && (
-          <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
-            {formatShortDate(new Date(task.due_date + "T00:00:00"))}
+          <span className={`min-w-0 flex-1 truncate text-sm ${done ? "text-muted-foreground line-through" : ""}`}>
+            {task.name}
           </span>
-        )
-      )}
+
+          {task.departments.length > 0 && (
+            <span className="hidden shrink-0 gap-1 lg:flex">
+              {task.departments.slice(0, 2).map((d) => (
+                <span key={d.id} className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                  {d.name}
+                </span>
+              ))}
+              {task.departments.length > 2 && (
+                <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                  +{task.departments.length - 2}
+                </span>
+              )}
+            </span>
+          )}
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            aria-label="Comments"
+            className="shrink-0 text-muted-foreground/60 hover:text-foreground"
+          >
+            <MessageSquare className="size-4" />
+          </button>
+        </div>
+
+        <span className={`text-xs ${isOverdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+          {dateLabel ?? "—"}
+        </span>
+
+        {task.assignees.length === 0 ? (
+          <AvatarBadge name={null} />
+        ) : (
+          <div className="flex shrink-0 -space-x-2">
+            {task.assignees.slice(0, 3).map((a) => (
+              <div key={a.id} className="ring-2 ring-card rounded-full">
+                <AvatarBadge name={a.full_name} />
+              </div>
+            ))}
+            {task.assignees.length > 3 && (
+              <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground ring-2 ring-card">
+                +{task.assignees.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+
+        {task.workflow_status ? (
+          <span className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+            <span className={`size-1.5 shrink-0 rounded-full ${STATUS_COLOR[task.workflow_status] ?? "bg-muted-foreground"}`} />
+            {STATUS_LABEL[task.workflow_status] ?? task.workflow_status}
+          </span>
+        ) : (
+          <span />
+        )}
+      </div>
     </div>
   );
 }
