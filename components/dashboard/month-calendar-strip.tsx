@@ -54,9 +54,9 @@ export function MonthCalendarStrip({
   const todayISO = toISODate(new Date());
 
   return (
-    <Card className="p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="font-semibold">
+    <Card className="p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">
           {MONTH_LABELS[month - 1]} {year}
         </h2>
         <div className="flex items-center gap-1">
@@ -81,12 +81,12 @@ export function MonthCalendarStrip({
             <Link
               key={iso}
               href={`/task?dueDate=${iso}`}
-              className={`flex w-16 shrink-0 flex-col items-center gap-1 rounded-lg border p-2.5 text-center transition-colors hover:border-primary/40 ${
+              className={`flex w-14 shrink-0 flex-col items-center gap-1 rounded-lg border p-2 text-center transition-colors hover:border-primary/40 ${
                 isToday ? "border-primary bg-primary/5" : ""
               }`}
             >
-              <span className="text-xs text-muted-foreground">{WEEKDAY_ABBR[d.getDay()]}</span>
-              <span className={`font-heading text-lg font-semibold ${isToday ? "text-primary" : ""}`}>
+              <span className="text-[11px] text-muted-foreground">{WEEKDAY_ABBR[d.getDay()]}</span>
+              <span className={`font-heading text-base font-semibold ${isToday ? "text-primary" : ""}`}>
                 {d.getDate()}
               </span>
               {count > 0 && (

@@ -65,9 +65,9 @@ export function StatisticsChart({ initialData }: { initialData: MonthlyStatRow[]
   }
 
   return (
-    <Card className="p-5">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-semibold">Statistics</h2>
+    <Card className="p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">Statistics</h2>
         <div className="flex items-center gap-2">
           <Select value={scope} onValueChange={(v) => refresh(v as "all" | "mine", range)}>
             <SelectTrigger className="w-32" size="sm">

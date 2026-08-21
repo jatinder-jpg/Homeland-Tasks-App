@@ -55,7 +55,7 @@ function ChecklistIllustration() {
 
 export function AddTaskPrompt({ hasTasks }: { hasTasks: boolean }) {
   return (
-    <Card className="flex flex-col items-center gap-3 p-5 text-center">
+    <Card className="flex flex-col items-center gap-2.5 p-4 text-center">
       <ChecklistIllustration />
       <div>
         <p className="font-heading text-base font-semibold">

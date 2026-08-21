@@ -20,19 +20,19 @@ export function PriorityTaskSummary({ counts }: { counts: PriorityCounts }) {
         })();
 
   return (
-    <Card className="p-5">
-      <h2 className="mb-4 font-heading text-base font-semibold">Priority Task Summary</h2>
+    <Card className="p-4">
+      <h2 className="mb-3 font-heading text-sm font-semibold">Priority Task Summary</h2>
       <div className="flex items-center justify-center">
         <div
-          className="relative flex size-40 shrink-0 items-center justify-center rounded-full"
+          className="relative flex size-32 shrink-0 items-center justify-center rounded-full"
           style={{ background: gradient }}
         >
-          <div className="flex size-28 items-center justify-center rounded-full bg-card">
-            <span className="font-heading text-3xl font-semibold">{total}</span>
+          <div className="flex size-22 items-center justify-center rounded-full bg-card">
+            <span className="font-heading text-2xl font-semibold">{total}</span>
           </div>
         </div>
       </div>
-      <div className="mt-5 flex items-center justify-center gap-5 text-sm">
+      <div className="mt-4 flex items-center justify-center gap-4 text-xs">
         <span className="flex items-center gap-1.5">
           <span className={`size-2 rounded-full ${COLORS.low.dot}`} />
           Low <span className="font-semibold">{low}</span>

@@ -9,12 +9,12 @@ export function TeamIncompleteTask({ members }: { members: MemberWithCounts[] })
     .slice(0, 6);
 
   return (
-    <Card className="p-5">
-      <h2 className="mb-4 font-heading text-base font-semibold">Team Incomplete Task</h2>
+    <Card className="p-4">
+      <h2 className="mb-3 font-heading text-sm font-semibold">Team Incomplete Task</h2>
       {ranked.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nothing outstanding right now.</p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {ranked.map((member) => (
             <div key={member.id} className="flex items-center gap-3">
               <AvatarBadge name={member.full_name} />
