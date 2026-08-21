@@ -23,12 +23,12 @@ export function StatCard({
   };
 
   const card = (
-    <Card className={`overflow-hidden p-3 ${href ? "transition-colors hover:border-primary/40" : ""}`}>
-      <div className={`mb-2 flex size-8 items-center justify-center rounded-md ${tints[tint]}`}>
-        <Icon className="size-4" />
+    <Card className={`overflow-hidden p-2.5 ${href ? "transition-colors hover:border-primary/40" : ""}`}>
+      <div className={`mb-1.5 flex size-7 items-center justify-center rounded-md ${tints[tint]}`}>
+        <Icon className="size-3.5" />
       </div>
-      <p className="truncate text-xs whitespace-nowrap text-muted-foreground">{label}</p>
-      <p className="font-heading text-xl font-semibold">{value}</p>
+      <p className="truncate text-[11px] whitespace-nowrap text-muted-foreground">{label}</p>
+      <p className="font-heading text-lg font-semibold">{value}</p>
     </Card>
   );
 
