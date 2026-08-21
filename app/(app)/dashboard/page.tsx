@@ -36,7 +36,7 @@ export default async function DashboardPage() {
     <div className="mx-auto w-full max-w-6xl space-y-6 p-6">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-[repeat(auto-fill,150px)] gap-3">
             <StatCard icon={ListChecks} label="Total Task" value={counts.total} tint="blue" href="/task" />
             <StatCard icon={UserCheck} label="Assigned to me" value={counts.assignedToMe} tint="green" href="/task?filter=assigned" />
             <StatCard icon={Clock} label="Due today" value={counts.dueToday} tint="amber" href="/task?filter=due-today" />
