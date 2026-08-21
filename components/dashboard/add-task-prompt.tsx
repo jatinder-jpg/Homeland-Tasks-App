@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 function ChecklistIllustration() {
   return (
-    <svg width="180" height="128" viewBox="0 0 200 140" fill="none" aria-hidden="true" className="shrink-0">
+    <svg width="150" height="105" viewBox="0 0 200 140" fill="none" aria-hidden="true" className="shrink-0">
       {/* backdrop */}
       <circle cx="150" cy="65" r="52" fill="var(--brand-gold)" opacity="0.1" />
       <rect x="6" y="120" width="188" height="2" fill="var(--border)" />
@@ -55,7 +55,8 @@ function ChecklistIllustration() {
 
 export function AddTaskPrompt({ hasTasks }: { hasTasks: boolean }) {
   return (
-    <Card className="flex items-center justify-between gap-4 p-5">
+    <Card className="flex flex-col items-center gap-3 p-5 text-center">
+      <ChecklistIllustration />
       <div>
         <p className="font-heading text-base font-semibold">
           {hasTasks ? "Add another task" : "You haven't added any tasks"}
@@ -63,14 +64,13 @@ export function AddTaskPrompt({ hasTasks }: { hasTasks: boolean }) {
         <p className="text-sm text-muted-foreground">
           {hasTasks ? "Keep the team moving." : "Welcome — let's get started."}
         </p>
-        <Button asChild className="mt-3">
-          <Link href="/task">
-            <Plus className="size-4" />
-            Add Task
-          </Link>
-        </Button>
       </div>
-      <ChecklistIllustration />
+      <Button asChild className="mt-1">
+        <Link href="/task">
+          <Plus className="size-4" />
+          Add Task
+        </Link>
+      </Button>
     </Card>
   );
 }

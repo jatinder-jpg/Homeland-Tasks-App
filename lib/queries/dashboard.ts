@@ -140,6 +140,30 @@ function aggregate(
     .sort((a, b) => a.period.localeCompare(b.period));
 }
 
+export async function getMonthlyDueCounts(
+  supabase: SupabaseClient<Database>,
+  opts: { year: number; month: number },
+): Promise<Record<string, number>> {
+  const start = `${opts.year}-${String(opts.month).padStart(2, "0")}-01`;
+  const nextMonth = opts.month === 12 ? { year: opts.year + 1, month: 1 } : { year: opts.year, month: opts.month + 1 };
+  const end = `${nextMonth.year}-${String(nextMonth.month).padStart(2, "0")}-01`;
+
+  const { data } = await supabase
+    .from("tp_tasks")
+    .select("due_date")
+    .eq("is_draft", false)
+    .eq("is_archived", false)
+    .gte("due_date", start)
+    .lt("due_date", end);
+
+  const counts: Record<string, number> = {};
+  for (const row of (data ?? []) as { due_date: string | null }[]) {
+    if (!row.due_date) continue;
+    counts[row.due_date] = (counts[row.due_date] ?? 0) + 1;
+  }
+  return counts;
+}
+
 function monthKey(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-01`;
 }

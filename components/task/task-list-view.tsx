@@ -100,6 +100,7 @@ export function TaskListView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const quickFilter = searchParams.get("filter");
+  const dueDateFilter = searchParams.get("dueDate");
 
   useEffect(() => {
     if (quickFilter !== "assigned") return;
@@ -123,15 +124,17 @@ export function TaskListView({
   };
 
   const quickFiltered = useMemo(() => {
-    if (!quickFilter) return source;
+    let result = source;
+    if (dueDateFilter) result = result.filter((t) => t.due_date === dueDateFilter);
+    if (!quickFilter) return result;
     const today = new Date().toISOString().slice(0, 10);
     if (quickFilter === "assigned")
-      return source.filter((t) => t.assignees.some((a) => a.id === currentUserId));
-    if (quickFilter === "due-today") return source.filter((t) => t.due_date === today);
+      return result.filter((t) => t.assignees.some((a) => a.id === currentUserId));
+    if (quickFilter === "due-today") return result.filter((t) => t.due_date === today);
     if (quickFilter === "overdue")
-      return source.filter((t) => t.due_date && t.due_date < today && t.status !== "done");
-    return source;
-  }, [source, quickFilter, currentUserId]);
+      return result.filter((t) => t.due_date && t.due_date < today && t.status !== "done");
+    return result;
+  }, [source, quickFilter, dueDateFilter, currentUserId]);
 
   const searched = useMemo(() => {
     if (!search.trim()) return quickFiltered;
@@ -571,11 +574,11 @@ export function TaskListView({
         </div>
       )}
 
-      {quickFilter && quickFilterLabel[quickFilter] && (
+      {(quickFilter || dueDateFilter) && (
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
             <Filter className="size-3" />
-            {quickFilterLabel[quickFilter]}
+            {dueDateFilter ? `Due ${dueDateFilter}` : quickFilterLabel[quickFilter ?? ""]}
             <button
               type="button"
               onClick={() => router.push("/task")}
