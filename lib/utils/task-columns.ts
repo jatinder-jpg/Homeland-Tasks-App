@@ -23,5 +23,5 @@ export const DEFAULT_COLUMNS: ColumnKey[] = COLUMN_DEFS.filter((c) => c.defaultO
 
 export function buildGridTemplate(columns: ColumnKey[]): string {
   const widths = columns.map((key) => COLUMN_DEFS.find((c) => c.key === key)?.width ?? "120px");
-  return ["minmax(0,1fr)", ...widths].join(" ");
+  return ["minmax(180px,1fr)", ...widths].join(" ");
 }

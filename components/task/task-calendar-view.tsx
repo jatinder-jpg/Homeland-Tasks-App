@@ -61,7 +61,7 @@ export function TaskCalendarView({
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-6">
+    <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-heading text-2xl font-bold">Task</h1>
         <Button size="sm" onClick={openCreate}>
@@ -72,15 +72,17 @@ export function TaskCalendarView({
 
       <TaskViewTabs />
 
-      <div className="flex-1 rounded-lg border bg-card p-4">
-        <FullCalendar
-          plugins={[dayGridPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
-          height="100%"
-          headerToolbar={{ left: "prev,next today", center: "title", right: "" }}
-          events={events}
-          eventClick={handleEventClick}
-        />
+      <div className="flex-1 overflow-x-auto rounded-lg border bg-card p-2 sm:p-4">
+        <div className="h-full min-w-[640px] [&_.fc-toolbar-title]:text-lg [&_.fc-button]:px-2 [&_.fc-button]:py-1 [&_.fc-button]:text-xs sm:[&_.fc-toolbar-title]:text-2xl sm:[&_.fc-button]:text-sm">
+          <FullCalendar
+            plugins={[dayGridPlugin, interactionPlugin]}
+            initialView="dayGridMonth"
+            height="100%"
+            headerToolbar={{ left: "prev,next today", center: "title", right: "" }}
+            events={events}
+            eventClick={handleEventClick}
+          />
+        </div>
       </div>
 
       <TaskFormDialog

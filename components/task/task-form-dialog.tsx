@@ -490,9 +490,9 @@ export function TaskFormDialog({
           )}
         </DialogHeader>
 
-        <div className="flex min-h-0 gap-4 overflow-hidden">
+        <div className="flex min-h-0 flex-col gap-4 overflow-hidden sm:flex-row">
         <form
-          className="max-h-[calc(88vh-8rem)] min-h-0 min-w-[320px] flex-[2] space-y-4 overflow-y-auto pr-1"
+          className="max-h-[38vh] min-h-0 flex-none space-y-4 overflow-y-auto pr-1 sm:max-h-[calc(88vh-8rem)] sm:min-w-[320px] sm:flex-[2]"
           onSubmit={handleSubmit(onSubmit)}
           noValidate
         >
@@ -529,7 +529,7 @@ export function TaskFormDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Status</Label>
               <Controller
@@ -704,7 +704,7 @@ export function TaskFormDialog({
               />
             </div>
             {recurringEnabled && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Controller
                   control={control}
                   name="recurrenceFrequency"
@@ -940,7 +940,7 @@ export function TaskFormDialog({
           </div>
         </form>
 
-        <div className="flex max-h-[calc(88vh-8rem)] min-h-0 min-w-[360px] flex-[3] flex-col overflow-hidden border-l pl-4">
+        <div className="flex max-h-[38vh] min-h-0 flex-1 flex-col overflow-hidden border-t pt-3 sm:max-h-[calc(88vh-8rem)] sm:min-w-[360px] sm:flex-[3] sm:border-t-0 sm:border-l sm:pt-0 sm:pl-4">
           <Tabs value={sidePanelTab} onValueChange={setSidePanelTab} className="flex min-h-0 flex-1 flex-col">
             <TabsList className="w-full">
               <TabsTrigger value="comment" className="flex-1">

@@ -260,10 +260,10 @@ export function TaskListView({
   const ids = [...selectedIds];
 
   return (
-    <div className="w-full space-y-4 p-6">
+    <div className="w-full space-y-4 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-heading text-2xl font-bold">Task</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={view === "drafts" ? "default" : "outline"}
             size="sm"
@@ -596,6 +596,7 @@ export function TaskListView({
       <TaskViewTabs />
 
       <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-x-auto">
         <div
           className="grid items-center gap-3 border-b bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground"
           style={{ gridTemplateColumns: gridTemplate }}
@@ -653,6 +654,7 @@ export function TaskListView({
             </div>
           );
         })}
+        </div>
       </div>
 
       <TaskFormDialog
