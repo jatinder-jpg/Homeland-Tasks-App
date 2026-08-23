@@ -15,6 +15,9 @@ export type ProjectInput = {
   status: "open" | "in_progress" | "on_hold" | "done";
   dueDate?: string | null;
   assigneeId?: string | null;
+  geofenceLat?: number | null;
+  geofenceLng?: number | null;
+  geofenceRadiusM?: number | null;
 };
 
 export async function createProjectAction(input: ProjectInput) {
@@ -40,6 +43,9 @@ export async function createProjectAction(input: ProjectInput) {
       status: input.status,
       due_date: input.dueDate || null,
       assignee_id: input.assigneeId || null,
+      geofence_lat: input.geofenceLat ?? null,
+      geofence_lng: input.geofenceLng ?? null,
+      geofence_radius_m: input.geofenceRadiusM ?? null,
       created_by: user.id,
     })
     .select("id")
@@ -90,6 +96,9 @@ export async function updateProjectAction(projectId: string, input: Partial<Proj
       ...(input.status !== undefined && { status: input.status }),
       ...(input.dueDate !== undefined && { due_date: input.dueDate || null }),
       ...(input.assigneeId !== undefined && { assignee_id: input.assigneeId || null }),
+      ...(input.geofenceLat !== undefined && { geofence_lat: input.geofenceLat }),
+      ...(input.geofenceLng !== undefined && { geofence_lng: input.geofenceLng }),
+      ...(input.geofenceRadiusM !== undefined && { geofence_radius_m: input.geofenceRadiusM }),
       updated_at: new Date().toISOString(),
     })
     .eq("id", projectId);

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { LocateFixed } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,9 @@ const schema = z.object({
   status: z.enum(["open", "in_progress", "on_hold", "done"]),
   dueDate: z.string().optional(),
   assigneeId: z.string().optional(),
+  geofenceLat: z.string().optional(),
+  geofenceLng: z.string().optional(),
+  geofenceRadiusM: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -51,12 +55,14 @@ export function ProjectFormDialog({
   onCreated?: (id: string) => void;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [isLocating, setIsLocating] = useState(false);
 
   const {
     register,
     handleSubmit,
     control,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -66,6 +72,9 @@ export function ProjectFormDialog({
       status: "open",
       dueDate: "",
       assigneeId: "",
+      geofenceLat: "",
+      geofenceLng: "",
+      geofenceRadiusM: "",
     },
   });
 
@@ -77,9 +86,31 @@ export function ProjectFormDialog({
         status: (project?.status as FormValues["status"]) ?? "open",
         dueDate: project?.due_date ?? "",
         assigneeId: project?.assignee_id ?? "",
+        geofenceLat: project?.geofence_lat != null ? String(project.geofence_lat) : "",
+        geofenceLng: project?.geofence_lng != null ? String(project.geofence_lng) : "",
+        geofenceRadiusM: project?.geofence_radius_m != null ? String(project.geofence_radius_m) : "",
       });
     }
   }, [open, project, reset]);
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      toast.error("Location isn't available in this browser");
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setValue("geofenceLat", String(position.coords.latitude));
+        setValue("geofenceLng", String(position.coords.longitude));
+        setIsLocating(false);
+      },
+      () => {
+        toast.error("Couldn't get your location — check location permission");
+        setIsLocating(false);
+      },
+    );
+  }
 
   const onSubmit = (values: FormValues) => {
     startTransition(async () => {
@@ -89,6 +120,9 @@ export function ProjectFormDialog({
         status: values.status,
         dueDate: values.dueDate || null,
         assigneeId: values.assigneeId || null,
+        geofenceLat: values.geofenceLat ? Number(values.geofenceLat) : null,
+        geofenceLng: values.geofenceLng ? Number(values.geofenceLng) : null,
+        geofenceRadiusM: values.geofenceRadiusM ? Number(values.geofenceRadiusM) : null,
       };
 
       const result = project
@@ -180,6 +214,39 @@ export function ProjectFormDialog({
                 </Select>
               )}
             />
+          </div>
+
+          <div className="space-y-2 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <Label>Check-in Location (optional)</Label>
+              <Button type="button" variant="outline" size="sm" onClick={useCurrentLocation} disabled={isLocating}>
+                <LocateFixed className="size-3.5" />
+                {isLocating ? "Locating…" : "Use current location"}
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="geofenceLat" className="text-xs text-muted-foreground">
+                  Latitude
+                </Label>
+                <Input id="geofenceLat" inputMode="decimal" placeholder="e.g. 28.6139" {...register("geofenceLat")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="geofenceLng" className="text-xs text-muted-foreground">
+                  Longitude
+                </Label>
+                <Input id="geofenceLng" inputMode="decimal" placeholder="e.g. 77.2090" {...register("geofenceLng")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="geofenceRadiusM" className="text-xs text-muted-foreground">
+                  Radius (m)
+                </Label>
+                <Input id="geofenceRadiusM" inputMode="numeric" placeholder="e.g. 200" {...register("geofenceRadiusM")} />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              When set, team members can only check in to this project from within this radius.
+            </p>
           </div>
 
           <DialogFooter>

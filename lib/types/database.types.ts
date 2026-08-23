@@ -836,6 +836,9 @@ export type Database = {
           created_by: string
           description: string | null
           due_date: string | null
+          geofence_lat: number | null
+          geofence_lng: number | null
+          geofence_radius_m: number | null
           id: string
           name: string
           organization_id: string
@@ -848,6 +851,9 @@ export type Database = {
           created_by: string
           description?: string | null
           due_date?: string | null
+          geofence_lat?: number | null
+          geofence_lng?: number | null
+          geofence_radius_m?: number | null
           id?: string
           name: string
           organization_id: string
@@ -860,6 +866,9 @@ export type Database = {
           created_by?: string
           description?: string | null
           due_date?: string | null
+          geofence_lat?: number | null
+          geofence_lng?: number | null
+          geofence_radius_m?: number | null
           id?: string
           name?: string
           organization_id?: string
@@ -1467,25 +1476,6 @@ export type Database = {
           },
         ]
       }
-    }
-    Views: {
-      tp_task_monthly_stats: {
-        Row: {
-          completed: number | null
-          incomplete: number | null
-          organization_id: string | null
-          period: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tp_tasks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "tp_organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tp_user_presence: {
         Row: {
           last_seen_at: string
@@ -1515,6 +1505,89 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "tp_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tp_attendance_records: {
+        Row: {
+          check_in_at: string
+          check_in_lat: number
+          check_in_lng: number
+          check_out_at: string | null
+          check_out_lat: number | null
+          check_out_lng: number | null
+          created_at: string
+          id: string
+          organization_id: string
+          profile_id: string
+          project_id: string | null
+        }
+        Insert: {
+          check_in_at?: string
+          check_in_lat: number
+          check_in_lng: number
+          check_out_at?: string | null
+          check_out_lat?: number | null
+          check_out_lng?: number | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          profile_id: string
+          project_id?: string | null
+        }
+        Update: {
+          check_in_at?: string
+          check_in_lat?: number
+          check_in_lng?: number
+          check_out_at?: string | null
+          check_out_lat?: number | null
+          check_out_lng?: number | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          profile_id?: string
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tp_attendance_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "tp_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tp_attendance_records_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "tp_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tp_attendance_records_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "tp_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      tp_task_monthly_stats: {
+        Row: {
+          completed: number | null
+          incomplete: number | null
+          organization_id: string | null
+          period: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tp_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "tp_organizations"
             referencedColumns: ["id"]
           },
         ]

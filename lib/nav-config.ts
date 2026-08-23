@@ -9,6 +9,7 @@ import {
   BarChart3,
   Users,
   Settings,
+  MapPin,
 } from "lucide-react";
 
 export type NavItem = {
@@ -22,6 +23,7 @@ export const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, available: true },
   { href: "/task", label: "Task", icon: ListChecks, available: true },
   { href: "/project", label: "Project", icon: Briefcase, available: true },
+  { href: "/attendance", label: "Attendance", icon: MapPin, available: true },
   { href: "/discussion", label: "Discussion", icon: MessageSquare, available: true },
   { href: "/documents", label: "Documents", icon: FolderOpen, available: true },
   { href: "/notes", label: "Notes", icon: NotebookText, available: true },
