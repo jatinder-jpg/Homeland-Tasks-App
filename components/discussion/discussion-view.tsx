@@ -47,6 +47,18 @@ export function DiscussionView({
     setSelectedId(channelId);
   }
 
+  function handleDeleted(channelId: string) {
+    setChannels((prev) => prev.filter((c) => c.id !== channelId));
+    setArchivedChannels((prev) => prev.filter((c) => c.id !== channelId));
+    if (selectedId === channelId) setSelectedId(null);
+  }
+
+  function handleRenamed(channelId: string, name: string) {
+    setChannels((prev) => prev.map((c) => (c.id === channelId ? { ...c, name } : c)));
+    setArchivedChannels((prev) => prev.map((c) => (c.id === channelId ? { ...c, name } : c)));
+    setActiveChannel((prev) => (prev && prev.id === channelId ? { ...prev, name } : prev));
+  }
+
   function handleArchiveChange(channelId: string, archived: boolean) {
     if (archived) {
       const channel = channels.find((c) => c.id === channelId);
@@ -71,6 +83,8 @@ export function DiscussionView({
         currentUserId={currentUserId}
         onCreated={handleCreated}
         onArchiveChange={handleArchiveChange}
+        onDeleted={handleDeleted}
+        onRenamed={handleRenamed}
       />
       {activeChannel && !isPending ? (
         <MessageThread

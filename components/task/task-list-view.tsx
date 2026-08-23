@@ -103,10 +103,9 @@ export function TaskListView({
   const dueDateFilter = searchParams.get("dueDate");
 
   useEffect(() => {
-    if (quickFilter !== "assigned") return;
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? ""));
-  }, [quickFilter]);
+  }, []);
 
   const source =
     view === "drafts"
@@ -121,6 +120,7 @@ export function TaskListView({
     assigned: "Assigned to me",
     "due-today": "Due today",
     overdue: "Past due",
+    critical: "Critical approvals",
   };
 
   const quickFiltered = useMemo(() => {
@@ -133,6 +133,8 @@ export function TaskListView({
     if (quickFilter === "due-today") return result.filter((t) => t.due_date === today);
     if (quickFilter === "overdue")
       return result.filter((t) => t.due_date && t.due_date < today && t.status !== "done");
+    if (quickFilter === "critical")
+      return result.filter((t) => t.urgent_alert_at !== null && t.created_by === currentUserId);
     return result;
   }, [source, quickFilter, dueDateFilter, currentUserId]);
 

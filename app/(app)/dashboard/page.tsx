@@ -1,4 +1,4 @@
-import { ListChecks, UserCheck, Clock, AlertTriangle } from "lucide-react";
+import { ListChecks, UserCheck, Clock, AlertTriangle, ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import {
   getDashboardCounts,
@@ -41,6 +41,7 @@ export default async function DashboardPage() {
             <StatCard icon={UserCheck} label="Assigned to me" value={counts.assignedToMe} tint="green" href="/task?filter=assigned" />
             <StatCard icon={Clock} label="Due today" value={counts.dueToday} tint="amber" href="/task?filter=due-today" />
             <StatCard icon={AlertTriangle} label="Past due tasks" value={counts.pastDue} tint="rose" href="/task?filter=overdue" />
+            <StatCard icon={ShieldAlert} label="Critical (Approvals)" value={counts.criticalApprovals} tint="rose" href="/task?filter=critical" />
           </div>
 
           <StatisticsChart initialData={statistics} />

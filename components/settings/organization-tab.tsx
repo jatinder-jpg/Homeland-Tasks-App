@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateOrganizationAction } from "@/lib/actions/settings";
+import { DangerZoneSection } from "@/components/settings/danger-zone";
 import type { Database } from "@/lib/types/database.types";
 
 type Organization = Database["public"]["Tables"]["tp_organizations"]["Row"];
@@ -58,30 +59,34 @@ export function OrganizationTab({
   ];
 
   return (
-    <Card className="max-w-lg space-y-5 p-6">
-      <div className="space-y-1.5">
-        <Label>Organization code</Label>
-        <Input value={organization.code} disabled />
-      </div>
-
-      {fields.map((field) => (
-        <div key={field.label} className="space-y-1.5">
-          <Label>{field.label}</Label>
-          <Input
-            value={field.value}
-            onChange={(e) => field.onChange(e.target.value)}
-            disabled={!isSuperAdmin}
-          />
+    <div className="space-y-6">
+      <Card className="max-w-lg space-y-5 p-6">
+        <div className="space-y-1.5">
+          <Label>Organization code</Label>
+          <Input value={organization.code} disabled />
         </div>
-      ))}
 
-      {isSuperAdmin ? (
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "Saving…" : "Save changes"}
-        </Button>
-      ) : (
-        <p className="text-xs text-muted-foreground">Only the super admin can edit organization details.</p>
-      )}
-    </Card>
+        {fields.map((field) => (
+          <div key={field.label} className="space-y-1.5">
+            <Label>{field.label}</Label>
+            <Input
+              value={field.value}
+              onChange={(e) => field.onChange(e.target.value)}
+              disabled={!isSuperAdmin}
+            />
+          </div>
+        ))}
+
+        {isSuperAdmin ? (
+          <Button onClick={handleSave} disabled={isPending}>
+            {isPending ? "Saving…" : "Save changes"}
+          </Button>
+        ) : (
+          <p className="text-xs text-muted-foreground">Only the super admin can edit organization details.</p>
+        )}
+      </Card>
+
+      {isSuperAdmin && <DangerZoneSection />}
+    </div>
   );
 }

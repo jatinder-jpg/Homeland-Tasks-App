@@ -179,7 +179,9 @@ export type Database = {
           body: string
           channel_id: string
           created_at: string
+          edited_at: string | null
           id: string
+          is_deleted: boolean
           sender_id: string
         }
         Insert: {
@@ -187,7 +189,9 @@ export type Database = {
           body: string
           channel_id: string
           created_at?: string
+          edited_at?: string | null
           id?: string
+          is_deleted?: boolean
           sender_id: string
         }
         Update: {
@@ -195,7 +199,9 @@ export type Database = {
           body?: string
           channel_id?: string
           created_at?: string
+          edited_at?: string | null
           id?: string
+          is_deleted?: boolean
           sender_id?: string
         }
         Relationships: [
@@ -947,6 +953,7 @@ export type Database = {
           subtasks_mandatory: boolean
           department_id: string | null
           updated_at: string
+          urgent_alert_at: string | null
           workflow_status: string
         }
         Insert: {
@@ -982,6 +989,7 @@ export type Database = {
           subtasks_mandatory?: boolean
           department_id?: string | null
           updated_at?: string
+          urgent_alert_at?: string | null
           workflow_status?: string
         }
         Update: {
@@ -1017,6 +1025,7 @@ export type Database = {
           subtasks_mandatory?: boolean
           department_id?: string | null
           updated_at?: string
+          urgent_alert_at?: string | null
           workflow_status?: string
         }
         Relationships: [

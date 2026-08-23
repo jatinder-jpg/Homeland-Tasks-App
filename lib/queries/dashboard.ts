@@ -12,6 +12,7 @@ export type DashboardCounts = {
   pastDue: number;
   newToday: number;
   closedToday: number;
+  criticalApprovals: number;
 };
 
 export async function getDashboardCounts(
@@ -21,7 +22,7 @@ export async function getDashboardCounts(
   const today = todayISO();
   const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 
-  const [total, assignedToMe, dueToday, pastDue, newToday, closedToday] = await Promise.all([
+  const [total, assignedToMe, dueToday, pastDue, newToday, closedToday, criticalApprovals] = await Promise.all([
     supabase
       .from("tp_tasks")
       .select("id", { count: "exact", head: true })
@@ -60,6 +61,12 @@ export async function getDashboardCounts(
       .eq("is_archived", false)
       .gte("completed_at", today)
       .lt("completed_at", tomorrow),
+    supabase
+      .from("tp_tasks")
+      .select("id", { count: "exact", head: true })
+      .eq("is_archived", false)
+      .eq("created_by", userId)
+      .not("urgent_alert_at", "is", null),
   ]);
 
   return {
@@ -69,6 +76,7 @@ export async function getDashboardCounts(
     pastDue: pastDue.count ?? 0,
     newToday: newToday.count ?? 0,
     closedToday: closedToday.count ?? 0,
+    criticalApprovals: criticalApprovals.count ?? 0,
   };
 }
 

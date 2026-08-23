@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { CheckCircle2, Circle, Pin, Flag, MapPin, Repeat, MessageSquare } from "lucide-react";
+import { CheckCircle2, Circle, Pin, Flag, MapPin, Repeat, MessageSquare, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { toggleTaskCompleteAction, togglePinAction } from "@/lib/actions/tasks";
 import { AvatarBadge } from "@/components/task/avatar-badge";
@@ -197,6 +197,13 @@ export function TaskRow({
 
           {task.is_recurring && (
             <Repeat className="size-4 shrink-0 text-violet-500" aria-label="Recurring task" />
+          )}
+
+          {task.urgent_alert_at && (
+            <span className="flex shrink-0 items-center gap-1 rounded-full bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400">
+              <ShieldAlert className="size-3" />
+              Critical
+            </span>
           )}
 
           <span

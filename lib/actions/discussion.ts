@@ -31,6 +31,19 @@ export async function archiveChannelAction(channelId: string, archived: boolean)
   return { success: true };
 }
 
+export async function renameChannelAction(channelId: string, name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "Group name can't be empty" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("tp_discussion_channels").update({ name: trimmed }).eq("id", channelId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/discussion");
+  return { success: true };
+}
+
 export async function createChannelAction(input: {
   type: "group" | "direct";
   name?: string;
@@ -160,6 +173,51 @@ export async function sendMessageAction(channelId: string, body: string) {
       ),
     );
   }
+
+  revalidatePath("/discussion");
+  return { success: true };
+}
+
+export async function editMessageAction(messageId: string, body: string) {
+  const trimmed = body.trim();
+  if (!trimmed) return { error: "Message can't be empty" };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("tp_discussion_messages")
+    .update({ body: trimmed, edited_at: new Date().toISOString() })
+    .eq("id", messageId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/discussion");
+  return { success: true };
+}
+
+export async function deleteMessageAction(messageId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("tp_discussion_messages").update({ is_deleted: true }).eq("id", messageId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/discussion");
+  return { success: true };
+}
+
+export async function deleteChatForMeAction(channelId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("tp_discussion_channel_members")
+    .delete()
+    .eq("channel_id", channelId)
+    .eq("profile_id", user.id);
+
+  if (error) return { error: error.message };
 
   revalidatePath("/discussion");
   return { success: true };

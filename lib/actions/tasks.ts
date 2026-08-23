@@ -636,6 +636,18 @@ export async function sendUrgentAlertAction(taskId: string) {
     link: "/task",
   });
 
+  await supabase.from("tp_tasks").update({ urgent_alert_at: new Date().toISOString() }).eq("id", taskId);
+  revalidateTaskViews();
+
+  return { success: true };
+}
+
+export async function resolveUrgentAlertAction(taskId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("tp_tasks").update({ urgent_alert_at: null }).eq("id", taskId);
+  if (error) return { error: error.message };
+
+  revalidateTaskViews();
   return { success: true };
 }
 

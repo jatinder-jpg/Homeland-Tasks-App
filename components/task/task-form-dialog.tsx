@@ -5,7 +5,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { X, TriangleAlert } from "lucide-react";
+import { X, TriangleAlert, ShieldAlert } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,7 @@ import {
   updateTaskAction,
   archiveTaskAction,
   sendUrgentAlertAction,
+  resolveUrgentAlertAction,
   getTaskDetailAction,
   addSubtaskAction,
   toggleSubtaskAction,
@@ -459,6 +460,19 @@ export function TaskFormDialog({
         return;
       }
       toast.success("Alert sent to the task creator");
+    });
+  }
+
+  function handleResolveAlert() {
+    if (!task) return;
+    startTransition(async () => {
+      const result = await resolveUrgentAlertAction(task.id);
+      if (result && "error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Critical approval resolved");
+      onOpenChange(false);
     });
   }
 
@@ -974,16 +988,28 @@ export function TaskFormDialog({
                 {task.is_archived ? "Unarchive" : "Archive"}
               </Button>
             )}
-            {task && task.created_by !== currentUserId && (
+            {task && task.urgent_alert_at ? (
               <Button
                 type="button"
-                variant="destructive"
-                onClick={handleSendAlert}
+                variant="outline"
+                onClick={handleResolveAlert}
                 disabled={isPending}
               >
-                <TriangleAlert className="size-4" />
-                Alert Creator
+                <ShieldAlert className="size-4" />
+                Mark Resolved
               </Button>
+            ) : (
+              task && task.created_by !== currentUserId && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleSendAlert}
+                  disabled={isPending}
+                >
+                  <TriangleAlert className="size-4" />
+                  Alert Creator
+                </Button>
+              )
             )}
           </div>
           <div className="flex gap-2">

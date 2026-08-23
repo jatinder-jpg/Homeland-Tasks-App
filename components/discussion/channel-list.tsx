@@ -1,20 +1,33 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Plus, Search, Users, User, Archive, MoreVertical, ArchiveRestore } from "lucide-react";
+import { Plus, Search, Users, User, Archive, MoreVertical, ArchiveRestore, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AvatarBadge } from "@/components/task/avatar-badge";
 import { NewChatDialog } from "@/components/discussion/new-chat-dialog";
-import { archiveChannelAction } from "@/lib/actions/discussion";
+import { archiveChannelAction, deleteChatForMeAction, renameChannelAction } from "@/lib/actions/discussion";
 import type { ChannelWithMembers } from "@/lib/queries/discussion";
 
 function channelDisplayName(channel: ChannelWithMembers, currentUserId: string) {
@@ -32,6 +45,8 @@ export function ChannelList({
   currentUserId,
   onCreated,
   onArchiveChange,
+  onDeleted,
+  onRenamed,
 }: {
   channels: ChannelWithMembers[];
   archivedChannels: ChannelWithMembers[];
@@ -41,11 +56,17 @@ export function ChannelList({
   currentUserId: string;
   onCreated: (channelId: string) => void;
   onArchiveChange: (channelId: string, archived: boolean) => void;
+  onDeleted: (channelId: string) => void;
+  onRenamed: (channelId: string, name: string) => void;
 }) {
   const [tab, setTab] = useState<"general" | "task">("general");
   const [search, setSearch] = useState("");
   const [dialogMode, setDialogMode] = useState<"group" | "direct" | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<{ id: string; name: string } | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [isRenamePending, startRenameTransition] = useTransition();
   const [, startTransition] = useTransition();
 
   const source = showArchived ? archivedChannels : channels;
@@ -66,6 +87,38 @@ export function ChannelList({
       }
       onArchiveChange(channelId, archived);
       toast.success(archived ? "Chat archived" : "Chat unarchived");
+    });
+  }
+
+  function confirmDelete() {
+    if (!deleteTargetId) return;
+    const channelId = deleteTargetId;
+    setDeleteTargetId(null);
+    startTransition(async () => {
+      const result = await deleteChatForMeAction(channelId);
+      if (result && "error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      onDeleted(channelId);
+      toast.success("Chat deleted");
+    });
+  }
+
+  function confirmRename() {
+    if (!renameTarget) return;
+    const trimmed = renameValue.trim();
+    if (!trimmed) return;
+    const channelId = renameTarget.id;
+    startRenameTransition(async () => {
+      const result = await renameChannelAction(channelId, trimmed);
+      if (result && "error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      onRenamed(channelId, trimmed);
+      toast.success("Group renamed");
+      setRenameTarget(null);
     });
   }
 
@@ -152,6 +205,17 @@ export function ChannelList({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {channel.type === "group" && (
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setRenameTarget({ id: channel.id, name: channel.name || "" });
+                        setRenameValue(channel.name || "");
+                      }}
+                    >
+                      <Pencil className="size-4" />
+                      Rename Group
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onSelect={() => toggleArchive(channel.id, !showArchived)}>
                     {showArchived ? (
                       <>
@@ -165,6 +229,15 @@ export function ChannelList({
                       </>
                     )}
                   </DropdownMenuItem>
+                  {channel.type !== "task" && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem variant="destructive" onSelect={() => setDeleteTargetId(channel.id)}>
+                        <Trash2 className="size-4" />
+                        Delete Chat
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -185,6 +258,47 @@ export function ChannelList({
           }}
         />
       )}
+
+      <AlertDialog open={deleteTargetId !== null} onOpenChange={(open) => !open && setDeleteTargetId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the conversation from your chat list. It stays visible to the other participant(s).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={renameTarget !== null} onOpenChange={(open) => !open && setRenameTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename group</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="rename-group">Group name</Label>
+            <Input
+              id="rename-group"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && confirmRename()}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameTarget(null)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmRename} disabled={isRenamePending || !renameValue.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
