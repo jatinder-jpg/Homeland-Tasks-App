@@ -146,7 +146,16 @@ export function TaskFormDialog({
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [newChecklistLabel, setNewChecklistLabel] = useState("");
   const [draftTaskId, setDraftTaskId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const dialogContentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const {
     register,
@@ -194,6 +203,10 @@ export function TaskFormDialog({
   const departmentIdsValue = watch("departmentIds");
   const noProjectsAvailable = projects.length === 0;
   const effectiveTaskId = task?.id ?? draftTaskId;
+  const pendingTabMessage = nameValue.trim()
+    ? "Setting up comments…"
+    : "Type a task name to start commenting, attaching files, or tracking activity.";
+  const [activeTab, setActiveTab] = useState("overview");
   const [sidePanelTab, setSidePanelTab] = useState("comment");
   const relevantProfileIds = [...assigneeIdsValue, ...followerIds];
   const assignableMembers = departmentIdsValue.length > 0
@@ -252,6 +265,7 @@ export function TaskFormDialog({
   useEffect(() => {
     if (!open) return;
     setDraftTaskId(null);
+    setActiveTab("overview");
     setSidePanelTab("comment");
 
     reset({
@@ -476,11 +490,483 @@ export function TaskFormDialog({
     });
   }
 
+  const formFields = (
+    <>
+      <div className="space-y-1.5">
+        <Label htmlFor="name">Task name</Label>
+        <Input id="name" {...register("name")} />
+        {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="description">Description</Label>
+        <Textarea id="description" rows={3} placeholder="Add more detail…" {...register("description")} />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Site Visit</Label>
+        <Controller
+          control={control}
+          name="siteVisit"
+          render={({ field }) => (
+            <Select
+              value={field.value ? "yes" : "no"}
+              onValueChange={(v) => field.onChange(v === "yes")}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="no">No</SelectItem>
+                <SelectItem value="yes">Yes</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label>Status</Label>
+          <Controller
+            control={control}
+            name="workflowStatus"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {WORKFLOW_STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      <span className="flex items-center gap-2">
+                        <span className={cn("size-2 rounded-full", opt.color)} />
+                        {opt.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Priority</Label>
+          <Controller
+            control={control}
+            name="priority"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="dueDate">Due date</Label>
+        <Input id="dueDate" type="date" {...register("dueDate")} />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Department</Label>
+        <Controller
+          control={control}
+          name="departmentIds"
+          render={({ field }) => (
+            <MultiSelectCombobox
+              options={departments.map((d) => ({ id: d.id, label: d.name }))}
+              selectedIds={field.value}
+              onToggle={(id) => toggleFollower(id, field.value, field.onChange)}
+              placeholder="No department"
+              emptyMessage="No departments yet."
+              searchPlaceholder="Search departments…"
+            />
+          )}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>
+          {departmentIdsValue.length > 0 ? "POC (Point of Contact)" : "Assignee"}
+          {departmentIdsValue.length > 0 && <span className="text-destructive"> *</span>}
+        </Label>
+        <Controller
+          control={control}
+          name="assigneeIds"
+          render={({ field }) => (
+            <MultiSelectCombobox
+              options={assignableMembers.map((m) => ({ id: m.id, label: m.full_name }))}
+              selectedIds={field.value}
+              onToggle={(id) => toggleFollower(id, field.value, field.onChange)}
+              placeholder={departmentIdsValue.length > 0 ? "No POC selected" : "Unassigned"}
+              emptyMessage={
+                departmentIdsValue.length > 0
+                  ? "No members in these departments yet — add them in Settings → Departments."
+                  : "No teammates yet."
+              }
+              searchPlaceholder="Search people…"
+              renderLeading={(o) => <AvatarBadge name={o.label} />}
+            />
+          )}
+        />
+        {errors.assigneeIds && <p className="text-xs text-destructive">{errors.assigneeIds.message}</p>}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Project {!isDraftValue && <span className="text-destructive">*</span>}</Label>
+        {noProjectsAvailable ? (
+          <p className="text-xs text-muted-foreground">
+            No projects yet — create one first, or save this task as a draft.
+          </p>
+        ) : (
+          <Controller
+            control={control}
+            name="projectId"
+            render={({ field }) => (
+              <Select
+                value={field.value || undefined}
+                onValueChange={(v) => field.onChange(v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        )}
+        {errors.projectId && <p className="text-xs text-destructive">{errors.projectId.message}</p>}
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label>Progress</Label>
+          <span className="text-xs text-muted-foreground">{progressValue}%</span>
+        </div>
+        <Controller
+          control={control}
+          name="progress"
+          render={({ field }) => (
+            <Slider
+              value={[field.value]}
+              min={0}
+              max={100}
+              step={5}
+              onValueChange={(v) => field.onChange(v[0])}
+            />
+          )}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label>Reminder</Label>
+          <Controller
+            control={control}
+            name="reminderEnabled"
+            render={({ field }) => (
+              <Switch size="sm" checked={field.value} onCheckedChange={field.onChange} />
+            )}
+          />
+        </div>
+        {reminderEnabled && <Input type="datetime-local" {...register("remindAt")} />}
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label>Recurring</Label>
+          <Controller
+            control={control}
+            name="recurringEnabled"
+            render={({ field }) => (
+              <Switch size="sm" checked={field.value} onCheckedChange={field.onChange} />
+            )}
+          />
+        </div>
+        {recurringEnabled && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Controller
+              control={control}
+              name="recurrenceFrequency"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            <Input
+              type="number"
+              min={1}
+              {...register("recurrenceInterval", { valueAsNumber: true })}
+              placeholder="Every N"
+            />
+            <div className="col-span-2 space-y-1.5">
+              <Label className="text-xs font-normal text-muted-foreground">End date (optional)</Label>
+              <Input type="date" {...register("recurrenceEndDate")} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Follower</Label>
+        <Controller
+          control={control}
+          name="followerIds"
+          render={({ field }) => (
+            <MultiSelectCombobox
+              options={members.map((m) => ({ id: m.id, label: m.full_name }))}
+              selectedIds={field.value}
+              onToggle={(id) => toggleFollower(id, field.value, field.onChange)}
+              placeholder="No followers"
+              emptyMessage="No teammates yet."
+              searchPlaceholder="Search people…"
+              renderLeading={(o) => <AvatarBadge name={o.label} />}
+            />
+          )}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label>Subtasks</Label>
+          {task && (
+            <Controller
+              control={control}
+              name="subtasksMandatory"
+              render={({ field }) => (
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Switch size="sm" checked={field.value} onCheckedChange={field.onChange} />
+                  Mandatory
+                </label>
+              )}
+            />
+          )}
+        </div>
+        {!task ? (
+          <p className="text-xs text-muted-foreground">Save the task first to add subtasks.</p>
+        ) : (
+          <div className="space-y-1 rounded-md border p-2">
+            {subtasks.map((s) => (
+              <div key={s.id} className="flex items-center gap-2 py-0.5">
+                <Checkbox
+                  checked={s.is_done}
+                  onCheckedChange={(v) => handleToggleSubtask(s.id, Boolean(v))}
+                />
+                <span
+                  className={cn(
+                    "flex-1 text-sm",
+                    s.is_done && "text-muted-foreground line-through",
+                  )}
+                >
+                  {s.title}
+                </span>
+                {s.assignee && <AvatarBadge name={s.assignee.full_name} />}
+                <button
+                  type="button"
+                  onClick={() => handleDeleteSubtask(s.id)}
+                  aria-label="Delete subtask"
+                >
+                  <X className="size-3.5 text-muted-foreground" />
+                </button>
+              </div>
+            ))}
+            <div className="flex gap-2 pt-1">
+              <Input
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                placeholder="Add a subtask"
+                className="h-8 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddSubtask();
+                  }
+                }}
+              />
+              <Button type="button" size="sm" variant="outline" onClick={handleAddSubtask}>
+                Add
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label>Checklist</Label>
+          {task && (
+            <Controller
+              control={control}
+              name="checklistMandatory"
+              render={({ field }) => (
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Switch size="sm" checked={field.value} onCheckedChange={field.onChange} />
+                  Mandatory
+                </label>
+              )}
+            />
+          )}
+        </div>
+        {!task ? (
+          <p className="text-xs text-muted-foreground">Save the task first to add a checklist.</p>
+        ) : (
+          <div className="space-y-1 rounded-md border p-2">
+            {checklist.map((c) => (
+              <div key={c.id} className="flex items-center gap-2 py-0.5">
+                <Checkbox
+                  checked={c.is_done}
+                  onCheckedChange={(v) => handleToggleChecklistItem(c.id, Boolean(v))}
+                />
+                <span
+                  className={cn(
+                    "flex-1 text-sm",
+                    c.is_done && "text-muted-foreground line-through",
+                  )}
+                >
+                  {c.label}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteChecklistItem(c.id)}
+                  aria-label="Delete checklist item"
+                >
+                  <X className="size-3.5 text-muted-foreground" />
+                </button>
+              </div>
+            ))}
+            <div className="flex gap-2 pt-1">
+              <Input
+                value={newChecklistLabel}
+                onChange={(e) => setNewChecklistLabel(e.target.value)}
+                placeholder="Add a checklist item"
+                className="h-8 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddChecklistItem();
+                  }
+                }}
+              />
+              <Button type="button" size="sm" variant="outline" onClick={handleAddChecklistItem}>
+                Add
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {customFields.length > 0 && (
+        <div className="space-y-3">
+          <Label>Custom Fields</Label>
+          {customFields.map((field) => (
+            <div key={field.id} className="space-y-1.5">
+              <Label className="text-xs font-normal text-muted-foreground">{field.name}</Label>
+              {field.field_type === "select" ? (
+                <Select
+                  value={customFieldValues[field.id] || undefined}
+                  onValueChange={(v) => setCustomFieldValue(field.id, v)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {field.options.map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={customFieldValues[field.id] || ""}
+                  onChange={(e) => setCustomFieldValue(field.id, e.target.value)}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-6">
+        <Controller
+          control={control}
+          name="isPinned"
+          render={({ field }) => (
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+              Pin task
+            </label>
+          )}
+        />
+        <Controller
+          control={control}
+          name="isDraft"
+          render={({ field }) => (
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+              Save as draft
+            </label>
+          )}
+        />
+      </div>
+    </>
+  );
+
+  const commentPane = effectiveTaskId ? (
+    <TaskCommentThread taskId={effectiveTaskId} />
+  ) : (
+    <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
+      {pendingTabMessage}
+    </div>
+  );
+  const attachmentPane = effectiveTaskId ? (
+    <TaskAttachmentList taskId={effectiveTaskId} />
+  ) : (
+    <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
+      {pendingTabMessage}
+    </div>
+  );
+  const activityPane = effectiveTaskId ? (
+    <TaskActivityLog taskId={effectiveTaskId} relevantProfileIds={relevantProfileIds} />
+  ) : (
+    <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
+      {pendingTabMessage}
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) handleClose(); }}>
       <DialogContent
         ref={dialogContentRef}
-        className="w-[92vw] sm:max-w-[1200px] max-h-[88vh] overflow-hidden [overflow-anchor:none]"
+        className={cn(
+          "max-h-[88vh] overflow-hidden [overflow-anchor:none]",
+          isMobile ? "w-[92vw]" : "w-[92vw] sm:max-w-[1200px]",
+        )}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
@@ -490,459 +976,12 @@ export function TaskFormDialog({
           )}
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-col gap-4 overflow-hidden sm:flex-row">
-        <form
-          className="max-h-[38vh] min-h-0 flex-none space-y-4 overflow-y-auto pr-1 sm:max-h-[calc(88vh-8rem)] sm:min-w-[320px] sm:flex-[2]"
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-        >
-          <div className="space-y-1.5">
-            <Label htmlFor="name">Task name</Label>
-            <Input id="name" {...register("name")} />
-            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="description">Description</Label>
-            <Textarea id="description" rows={3} placeholder="Add more detail…" {...register("description")} />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Site Visit</Label>
-            <Controller
-              control={control}
-              name="siteVisit"
-              render={({ field }) => (
-                <Select
-                  value={field.value ? "yes" : "no"}
-                  onValueChange={(v) => field.onChange(v === "yes")}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="no">No</SelectItem>
-                    <SelectItem value="yes">Yes</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Status</Label>
-              <Controller
-                control={control}
-                name="workflowStatus"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {WORKFLOW_STATUS_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          <span className="flex items-center gap-2">
-                            <span className={cn("size-2 rounded-full", opt.color)} />
-                            {opt.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Priority</Label>
-              <Controller
-                control={control}
-                name="priority"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="dueDate">Due date</Label>
-            <Input id="dueDate" type="date" {...register("dueDate")} />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Department</Label>
-            <Controller
-              control={control}
-              name="departmentIds"
-              render={({ field }) => (
-                <MultiSelectCombobox
-                  options={departments.map((d) => ({ id: d.id, label: d.name }))}
-                  selectedIds={field.value}
-                  onToggle={(id) => toggleFollower(id, field.value, field.onChange)}
-                  placeholder="No department"
-                  emptyMessage="No departments yet."
-                  searchPlaceholder="Search departments…"
-                />
-              )}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>
-              {departmentIdsValue.length > 0 ? "POC (Point of Contact)" : "Assignee"}
-              {departmentIdsValue.length > 0 && <span className="text-destructive"> *</span>}
-            </Label>
-            <Controller
-              control={control}
-              name="assigneeIds"
-              render={({ field }) => (
-                <MultiSelectCombobox
-                  options={assignableMembers.map((m) => ({ id: m.id, label: m.full_name }))}
-                  selectedIds={field.value}
-                  onToggle={(id) => toggleFollower(id, field.value, field.onChange)}
-                  placeholder={departmentIdsValue.length > 0 ? "No POC selected" : "Unassigned"}
-                  emptyMessage={
-                    departmentIdsValue.length > 0
-                      ? "No members in these departments yet — add them in Settings → Departments."
-                      : "No teammates yet."
-                  }
-                  searchPlaceholder="Search people…"
-                  renderLeading={(o) => <AvatarBadge name={o.label} />}
-                />
-              )}
-            />
-            {errors.assigneeIds && <p className="text-xs text-destructive">{errors.assigneeIds.message}</p>}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Project {!isDraftValue && <span className="text-destructive">*</span>}</Label>
-            {noProjectsAvailable ? (
-              <p className="text-xs text-muted-foreground">
-                No projects yet — create one first, or save this task as a draft.
-              </p>
-            ) : (
-              <Controller
-                control={control}
-                name="projectId"
-                render={({ field }) => (
-                  <Select
-                    value={field.value || undefined}
-                    onValueChange={(v) => field.onChange(v)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a project" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projects.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            )}
-            {errors.projectId && <p className="text-xs text-destructive">{errors.projectId.message}</p>}
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label>Progress</Label>
-              <span className="text-xs text-muted-foreground">{progressValue}%</span>
-            </div>
-            <Controller
-              control={control}
-              name="progress"
-              render={({ field }) => (
-                <Slider
-                  value={[field.value]}
-                  min={0}
-                  max={100}
-                  step={5}
-                  onValueChange={(v) => field.onChange(v[0])}
-                />
-              )}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label>Reminder</Label>
-              <Controller
-                control={control}
-                name="reminderEnabled"
-                render={({ field }) => (
-                  <Switch size="sm" checked={field.value} onCheckedChange={field.onChange} />
-                )}
-              />
-            </div>
-            {reminderEnabled && <Input type="datetime-local" {...register("remindAt")} />}
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label>Recurring</Label>
-              <Controller
-                control={control}
-                name="recurringEnabled"
-                render={({ field }) => (
-                  <Switch size="sm" checked={field.value} onCheckedChange={field.onChange} />
-                )}
-              />
-            </div>
-            {recurringEnabled && (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Controller
-                  control={control}
-                  name="recurrenceFrequency"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                <Input
-                  type="number"
-                  min={1}
-                  {...register("recurrenceInterval", { valueAsNumber: true })}
-                  placeholder="Every N"
-                />
-                <div className="col-span-2 space-y-1.5">
-                  <Label className="text-xs font-normal text-muted-foreground">End date (optional)</Label>
-                  <Input type="date" {...register("recurrenceEndDate")} />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Follower</Label>
-            <Controller
-              control={control}
-              name="followerIds"
-              render={({ field }) => (
-                <MultiSelectCombobox
-                  options={members.map((m) => ({ id: m.id, label: m.full_name }))}
-                  selectedIds={field.value}
-                  onToggle={(id) => toggleFollower(id, field.value, field.onChange)}
-                  placeholder="No followers"
-                  emptyMessage="No teammates yet."
-                  searchPlaceholder="Search people…"
-                  renderLeading={(o) => <AvatarBadge name={o.label} />}
-                />
-              )}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label>Subtasks</Label>
-              {task && (
-                <Controller
-                  control={control}
-                  name="subtasksMandatory"
-                  render={({ field }) => (
-                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Switch size="sm" checked={field.value} onCheckedChange={field.onChange} />
-                      Mandatory
-                    </label>
-                  )}
-                />
-              )}
-            </div>
-            {!task ? (
-              <p className="text-xs text-muted-foreground">Save the task first to add subtasks.</p>
-            ) : (
-              <div className="space-y-1 rounded-md border p-2">
-                {subtasks.map((s) => (
-                  <div key={s.id} className="flex items-center gap-2 py-0.5">
-                    <Checkbox
-                      checked={s.is_done}
-                      onCheckedChange={(v) => handleToggleSubtask(s.id, Boolean(v))}
-                    />
-                    <span
-                      className={cn(
-                        "flex-1 text-sm",
-                        s.is_done && "text-muted-foreground line-through",
-                      )}
-                    >
-                      {s.title}
-                    </span>
-                    {s.assignee && <AvatarBadge name={s.assignee.full_name} />}
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSubtask(s.id)}
-                      aria-label="Delete subtask"
-                    >
-                      <X className="size-3.5 text-muted-foreground" />
-                    </button>
-                  </div>
-                ))}
-                <div className="flex gap-2 pt-1">
-                  <Input
-                    value={newSubtaskTitle}
-                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                    placeholder="Add a subtask"
-                    className="h-8 text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddSubtask();
-                      }
-                    }}
-                  />
-                  <Button type="button" size="sm" variant="outline" onClick={handleAddSubtask}>
-                    Add
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label>Checklist</Label>
-              {task && (
-                <Controller
-                  control={control}
-                  name="checklistMandatory"
-                  render={({ field }) => (
-                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Switch size="sm" checked={field.value} onCheckedChange={field.onChange} />
-                      Mandatory
-                    </label>
-                  )}
-                />
-              )}
-            </div>
-            {!task ? (
-              <p className="text-xs text-muted-foreground">Save the task first to add a checklist.</p>
-            ) : (
-              <div className="space-y-1 rounded-md border p-2">
-                {checklist.map((c) => (
-                  <div key={c.id} className="flex items-center gap-2 py-0.5">
-                    <Checkbox
-                      checked={c.is_done}
-                      onCheckedChange={(v) => handleToggleChecklistItem(c.id, Boolean(v))}
-                    />
-                    <span
-                      className={cn(
-                        "flex-1 text-sm",
-                        c.is_done && "text-muted-foreground line-through",
-                      )}
-                    >
-                      {c.label}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteChecklistItem(c.id)}
-                      aria-label="Delete checklist item"
-                    >
-                      <X className="size-3.5 text-muted-foreground" />
-                    </button>
-                  </div>
-                ))}
-                <div className="flex gap-2 pt-1">
-                  <Input
-                    value={newChecklistLabel}
-                    onChange={(e) => setNewChecklistLabel(e.target.value)}
-                    placeholder="Add a checklist item"
-                    className="h-8 text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddChecklistItem();
-                      }
-                    }}
-                  />
-                  <Button type="button" size="sm" variant="outline" onClick={handleAddChecklistItem}>
-                    Add
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {customFields.length > 0 && (
-            <div className="space-y-3">
-              <Label>Custom Fields</Label>
-              {customFields.map((field) => (
-                <div key={field.id} className="space-y-1.5">
-                  <Label className="text-xs font-normal text-muted-foreground">{field.name}</Label>
-                  {field.field_type === "select" ? (
-                    <Select
-                      value={customFieldValues[field.id] || undefined}
-                      onValueChange={(v) => setCustomFieldValue(field.id, v)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {field.options.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      value={customFieldValues[field.id] || ""}
-                      onChange={(e) => setCustomFieldValue(field.id, e.target.value)}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-center gap-6">
-            <Controller
-              control={control}
-              name="isPinned"
-              render={({ field }) => (
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  Pin task
-                </label>
-              )}
-            />
-            <Controller
-              control={control}
-              name="isDraft"
-              render={({ field }) => (
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  Save as draft
-                </label>
-              )}
-            />
-          </div>
-        </form>
-
-        <div className="flex max-h-[38vh] min-h-0 flex-1 flex-col overflow-hidden border-t pt-3 sm:max-h-[calc(88vh-8rem)] sm:min-w-[360px] sm:flex-[3] sm:border-t-0 sm:border-l sm:pt-0 sm:pl-4">
-          <Tabs value={sidePanelTab} onValueChange={setSidePanelTab} className="flex min-h-0 flex-1 flex-col">
+        {isMobile ? (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <TabsList className="w-full">
+              <TabsTrigger value="overview" className="flex-1">
+                Overview
+              </TabsTrigger>
               <TabsTrigger value="comment" className="flex-1">
                 Comment
               </TabsTrigger>
@@ -953,28 +992,58 @@ export function TaskFormDialog({
                 Log Activity
               </TabsTrigger>
             </TabsList>
-            {effectiveTaskId ? (
-              <>
+
+            <TabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto">
+              <form className="space-y-4 py-3 pr-1" onSubmit={handleSubmit(onSubmit)} noValidate>
+                {formFields}
+              </form>
+            </TabsContent>
+            <TabsContent value="comment" className="flex min-h-0 flex-1 flex-col">
+              {commentPane}
+            </TabsContent>
+            <TabsContent value="attachment" className="flex min-h-0 flex-1 flex-col">
+              {attachmentPane}
+            </TabsContent>
+            <TabsContent value="activity" className="flex min-h-0 flex-1 flex-col">
+              {activityPane}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="flex min-h-0 flex-1 gap-4 overflow-hidden">
+            <form
+              className="max-h-[calc(88vh-8rem)] min-h-0 min-w-[320px] flex-[2] space-y-4 overflow-y-auto pr-1"
+              onSubmit={handleSubmit(onSubmit)}
+              noValidate
+            >
+              {formFields}
+            </form>
+
+            <div className="flex max-h-[calc(88vh-8rem)] min-h-0 min-w-[360px] flex-[3] flex-col overflow-hidden border-l pl-4">
+              <Tabs value={sidePanelTab} onValueChange={setSidePanelTab} className="flex min-h-0 flex-1 flex-col">
+                <TabsList className="w-full">
+                  <TabsTrigger value="comment" className="flex-1">
+                    Comment
+                  </TabsTrigger>
+                  <TabsTrigger value="attachment" className="flex-1">
+                    Attachment
+                  </TabsTrigger>
+                  <TabsTrigger value="activity" className="flex-1">
+                    Log Activity
+                  </TabsTrigger>
+                </TabsList>
                 <TabsContent value="comment" className="flex min-h-0 flex-1 flex-col">
-                  <TaskCommentThread taskId={effectiveTaskId} />
+                  {commentPane}
                 </TabsContent>
                 <TabsContent value="attachment" className="flex min-h-0 flex-1 flex-col">
-                  <TaskAttachmentList taskId={effectiveTaskId} />
+                  {attachmentPane}
                 </TabsContent>
                 <TabsContent value="activity" className="flex min-h-0 flex-1 flex-col">
-                  <TaskActivityLog taskId={effectiveTaskId} relevantProfileIds={relevantProfileIds} />
+                  {activityPane}
                 </TabsContent>
-              </>
-            ) : (
-              <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
-                {nameValue.trim()
-                  ? "Setting up comments…"
-                  : "Type a task name to start commenting, attaching files, or tracking activity."}
-              </div>
-            )}
-          </Tabs>
-        </div>
-        </div>
+              </Tabs>
+            </div>
+          </div>
+        )}
 
         <DialogFooter className="sm:justify-between">
           <div className="flex gap-2">
