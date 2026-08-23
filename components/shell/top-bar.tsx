@@ -31,6 +31,7 @@ export function TopBar({
         size="icon"
         onClick={onToggleSidebar}
         aria-label="Toggle sidebar"
+        className="hidden md:inline-flex"
       >
         <Menu className="size-5" />
       </Button>

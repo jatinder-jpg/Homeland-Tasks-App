@@ -18,14 +18,16 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   available: boolean;
+  /** Shown in the mobile bottom tab bar; everything else lives under "More". */
+  primary?: boolean;
 };
 
 export const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, available: true },
-  { href: "/task", label: "Task", icon: ListChecks, available: true },
-  { href: "/project", label: "Project", icon: Briefcase, available: true },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, available: true, primary: true },
+  { href: "/task", label: "Task", icon: ListChecks, available: true, primary: true },
+  { href: "/project", label: "Project", icon: Briefcase, available: true, primary: true },
   { href: "/attendance", label: "Attendance", icon: MapPin, available: true },
-  { href: "/discussion", label: "Discussion", icon: MessageSquare, available: true },
+  { href: "/discussion", label: "Discussion", icon: MessageSquare, available: true, primary: true },
   { href: "/meetings", label: "Meeting", icon: Video, available: true },
   { href: "/documents", label: "Documents", icon: FolderOpen, available: true },
   { href: "/notes", label: "Notes", icon: NotebookText, available: true },

@@ -17,7 +17,7 @@ export function Sidebar({
 
   return (
     <aside
-      className={`flex w-60 shrink-0 flex-col bg-sidebar py-6 transition-all ${open ? "" : "-ml-60"}`}
+      className={`hidden w-60 shrink-0 flex-col bg-sidebar py-6 transition-all md:flex ${open ? "" : "md:-ml-60"}`}
     >
       <div className="mb-7 flex items-center gap-2.5 px-5">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-heading font-bold text-sidebar-primary-foreground">

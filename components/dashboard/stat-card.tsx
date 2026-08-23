@@ -27,7 +27,7 @@ export function StatCard({
       <div className={`mb-2 flex size-9 items-center justify-center rounded-lg ${tints[tint]}`}>
         <Icon className="size-4" />
       </div>
-      <p className="truncate text-xs whitespace-nowrap text-muted-foreground">{label}</p>
+      <p className="truncate text-xs font-bold whitespace-nowrap text-muted-foreground">{label}</p>
       <p className="font-heading text-xl font-semibold">{value}</p>
     </Card>
   );

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { TopBar } from "@/components/shell/top-bar";
 import { Sidebar } from "@/components/shell/sidebar";
+import { MobileBottomNav } from "@/components/shell/mobile-bottom-nav";
 import { PresenceProvider } from "@/lib/presence/presence-context";
 import type { NotificationWithActor } from "@/lib/queries/notifications";
 
@@ -38,8 +39,9 @@ export function AppShell({
         />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar orgName={orgName} open={sidebarOpen} />
-          <main className="flex flex-1 flex-col overflow-y-auto bg-muted/30">{children}</main>
+          <main className="flex flex-1 flex-col overflow-y-auto bg-muted/30 pb-14 md:pb-0">{children}</main>
         </div>
+        <MobileBottomNav />
       </div>
     </PresenceProvider>
   );
