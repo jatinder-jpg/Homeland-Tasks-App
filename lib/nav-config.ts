@@ -10,6 +10,7 @@ import {
   Users,
   Settings,
   MapPin,
+  Video,
 } from "lucide-react";
 
 export type NavItem = {
@@ -25,6 +26,7 @@ export const navItems: NavItem[] = [
   { href: "/project", label: "Project", icon: Briefcase, available: true },
   { href: "/attendance", label: "Attendance", icon: MapPin, available: true },
   { href: "/discussion", label: "Discussion", icon: MessageSquare, available: true },
+  { href: "/meetings", label: "Meeting", icon: Video, available: true },
   { href: "/documents", label: "Documents", icon: FolderOpen, available: true },
   { href: "/notes", label: "Notes", icon: NotebookText, available: true },
   { href: "/reports", label: "Reports", icon: BarChart3, available: true },
