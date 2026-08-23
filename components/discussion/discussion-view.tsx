@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { MessageSquare } from "lucide-react";
 import { ChannelList } from "@/components/discussion/channel-list";
 import { MessageThread } from "@/components/discussion/message-thread";
-import { getChannelDataAction } from "@/lib/actions/discussion";
+import { getChannelDataAction, markChannelReadAction } from "@/lib/actions/discussion";
 import type { ChannelWithMembers, MessageWithSender } from "@/lib/queries/discussion";
 
 export function DiscussionView({
@@ -35,6 +35,8 @@ export function DiscussionView({
       setActiveChannel(channel);
       setMessages(msgs);
     });
+    markChannelReadAction(selectedId);
+    setChannels((prev) => prev.map((c) => (c.id === selectedId ? { ...c, unreadCount: 0 } : c)));
   }, [selectedId]);
 
   function handleCreated(channelId: string) {

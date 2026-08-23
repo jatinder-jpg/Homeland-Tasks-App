@@ -36,6 +36,11 @@ function channelDisplayName(channel: ChannelWithMembers, currentUserId: string) 
   return other?.profile.full_name ?? "Direct message";
 }
 
+function otherMemberId(channel: ChannelWithMembers, currentUserId: string) {
+  if (channel.type !== "direct") return undefined;
+  return channel.members.find((m) => m.profile_id !== currentUserId)?.profile_id;
+}
+
 export function ChannelList({
   channels,
   archivedChannels,
@@ -179,6 +184,7 @@ export function ChannelList({
         )}
         {filtered.map((channel) => {
           const name = channelDisplayName(channel, currentUserId);
+          const unread = channel.unreadCount > 0;
           return (
             <div
               key={channel.id}
@@ -187,21 +193,26 @@ export function ChannelList({
               }`}
             >
               <button onClick={() => onSelect(channel.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                <AvatarBadge name={name} />
+                <AvatarBadge name={name} profileId={otherMemberId(channel, currentUserId)} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{name}</p>
-                  <p className="truncate text-xs text-muted-foreground">
+                  <p className={`truncate text-sm ${unread ? "font-semibold" : "font-medium"}`}>{name}</p>
+                  <p className={`truncate text-xs ${unread ? "text-foreground/80" : "text-muted-foreground"}`}>
                     {channel.last_message_preview || "No messages yet"}
                   </p>
                 </div>
+                {unread && (
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
+                    {channel.unreadCount > 9 ? "9+" : channel.unreadCount}
+                  </span>
+                )}
               </button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="opacity-0 group-hover:opacity-100"
+                    className="shrink-0 rounded p-1 text-muted-foreground/50 opacity-100 hover:bg-accent hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100 sm:data-[state=open]:opacity-100"
                     aria-label="More options"
                   >
-                    <MoreVertical className="size-4 text-muted-foreground" />
+                    <MoreVertical className="size-4" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">

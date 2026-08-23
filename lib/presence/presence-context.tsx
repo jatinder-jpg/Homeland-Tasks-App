@@ -58,3 +58,9 @@ export function usePresenceStatus(profileId: string | null | undefined): Presenc
   if (elapsed <= IDLE_THRESHOLD_MS) return "idle";
   return "offline";
 }
+
+export function usePresenceLastSeen(profileId: string | null | undefined): string | null {
+  const lastSeenByProfile = useContext(PresenceContext);
+  if (!profileId) return null;
+  return lastSeenByProfile.get(profileId) ?? null;
+}

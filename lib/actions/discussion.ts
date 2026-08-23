@@ -121,9 +121,13 @@ export async function createChannelAction(input: {
   return { success: true as const, id: channel.id };
 }
 
-export async function sendMessageAction(channelId: string, body: string) {
+export async function sendMessageAction(
+  channelId: string,
+  body: string,
+  opts: { attachmentFileId?: string | null; replyToMessageId?: string | null } = {},
+) {
   const trimmed = body.trim();
-  if (!trimmed) return { error: "Message can't be empty" };
+  if (!trimmed && !opts.attachmentFileId) return { error: "Message can't be empty" };
 
   const supabase = await createClient();
   const {
@@ -135,6 +139,8 @@ export async function sendMessageAction(channelId: string, body: string) {
     channel_id: channelId,
     sender_id: user.id,
     body: trimmed,
+    attachment_file_id: opts.attachmentFileId || null,
+    reply_to_message_id: opts.replyToMessageId || null,
   });
   if (insertError) return { error: insertError.message };
 
@@ -199,6 +205,57 @@ export async function deleteMessageAction(messageId: string) {
   const { error } = await supabase.from("tp_discussion_messages").update({ is_deleted: true }).eq("id", messageId);
 
   if (error) return { error: error.message };
+
+  revalidatePath("/discussion");
+  return { success: true };
+}
+
+export async function markChannelReadAction(channelId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("tp_discussion_channel_members")
+    .update({ last_read_at: new Date().toISOString() })
+    .eq("channel_id", channelId)
+    .eq("profile_id", user.id);
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+export async function toggleReactionAction(messageId: string, emoji: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: existing } = await supabase
+    .from("tp_discussion_message_reactions")
+    .select("id, emoji")
+    .eq("message_id", messageId)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+
+  if (existing && existing.emoji === emoji) {
+    const { error } = await supabase.from("tp_discussion_message_reactions").delete().eq("id", existing.id);
+    if (error) return { error: error.message };
+  } else if (existing) {
+    const { error } = await supabase
+      .from("tp_discussion_message_reactions")
+      .update({ emoji })
+      .eq("id", existing.id);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("tp_discussion_message_reactions")
+      .insert({ message_id: messageId, profile_id: user.id, emoji });
+    if (error) return { error: error.message };
+  }
 
   revalidatePath("/discussion");
   return { success: true };

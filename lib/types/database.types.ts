@@ -80,16 +80,19 @@ export type Database = {
         Row: {
           channel_id: string
           created_at: string
+          last_read_at: string | null
           profile_id: string
         }
         Insert: {
           channel_id: string
           created_at?: string
+          last_read_at?: string | null
           profile_id: string
         }
         Update: {
           channel_id?: string
           created_at?: string
+          last_read_at?: string | null
           profile_id?: string
         }
         Relationships: [
@@ -182,6 +185,7 @@ export type Database = {
           edited_at: string | null
           id: string
           is_deleted: boolean
+          reply_to_message_id: string | null
           sender_id: string
         }
         Insert: {
@@ -192,6 +196,7 @@ export type Database = {
           edited_at?: string | null
           id?: string
           is_deleted?: boolean
+          reply_to_message_id?: string | null
           sender_id: string
         }
         Update: {
@@ -202,6 +207,7 @@ export type Database = {
           edited_at?: string | null
           id?: string
           is_deleted?: boolean
+          reply_to_message_id?: string | null
           sender_id?: string
         }
         Relationships: [
@@ -217,6 +223,13 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "tp_discussion_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tp_discussion_messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "tp_discussion_messages"
             referencedColumns: ["id"]
           },
           {
@@ -1569,6 +1582,45 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "tp_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tp_discussion_message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tp_discussion_message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "tp_discussion_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tp_discussion_message_reactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "tp_profiles"
             referencedColumns: ["id"]
           },
         ]
