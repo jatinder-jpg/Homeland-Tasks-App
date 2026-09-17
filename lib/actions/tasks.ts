@@ -285,7 +285,7 @@ export async function createTaskAction(input: TaskInput) {
             type: "task_assigned",
             title: `${actorProfile?.full_name ?? "Someone"} assigned you a task`,
             body: task.name,
-            link: "/task",
+            link: `/task?open=${task.id}`,
           }),
         ),
       );
@@ -386,7 +386,7 @@ export async function updateTaskAction(taskId: string, input: Partial<TaskInput>
             type: "task_assigned",
             title: `${actorProfile?.full_name ?? "Someone"} assigned you a task`,
             body: input.name ?? existingTask.name,
-            link: "/task",
+            link: `/task?open=${taskId}`,
           }),
         ),
       );
@@ -466,7 +466,7 @@ export async function toggleTaskCompleteAction(taskId: string, done: boolean) {
         type: "task_review_requested",
         title: `${actorProfile?.full_name ?? "Someone"} marked a task ready for your review`,
         body: task.name,
-        link: "/task",
+        link: `/task?open=${taskId}`,
       });
     }
 
@@ -633,7 +633,7 @@ export async function sendUrgentAlertAction(taskId: string) {
     type: "task_urgent_alert",
     title: `${actorProfile?.full_name ?? "Someone"} needs your urgent approval`,
     body: task.name,
-    link: "/task",
+    link: `/task?open=${taskId}`,
   });
 
   await supabase.from("tp_tasks").update({ urgent_alert_at: new Date().toISOString() }).eq("id", taskId);

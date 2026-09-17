@@ -363,7 +363,7 @@ export function MessageThread({
                 )}
 
                 {!isEditing && !message.is_deleted && (
-                  <div className="flex shrink-0 items-center opacity-0 group-hover:opacity-100">
+                  <div className="flex shrink-0 items-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
                     <Popover>
                       <PopoverTrigger asChild>
                         <button type="button" aria-label="React" className="rounded p-1 hover:bg-accent">

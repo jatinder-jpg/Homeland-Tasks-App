@@ -101,11 +101,26 @@ export function TaskListView({
   const searchParams = useSearchParams();
   const quickFilter = searchParams.get("filter");
   const dueDateFilter = searchParams.get("dueDate");
+  const openTaskId = searchParams.get("open");
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? ""));
   }, []);
+
+  useEffect(() => {
+    if (!openTaskId) return;
+    const all = [...tasks, ...draftTasks, ...archivedTasks, ...recurringTasks];
+    const task = all.find((t) => t.id === openTaskId);
+    if (task) {
+      setEditingTask(task);
+      setDialogOpen(true);
+    }
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("open");
+    router.replace(next.size > 0 ? `/task?${next.toString()}` : "/task", { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openTaskId]);
 
   const source =
     view === "drafts"

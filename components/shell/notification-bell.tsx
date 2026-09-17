@@ -157,8 +157,8 @@ export function NotificationBell({
                 <div className="flex items-start gap-2">
                   {!n.is_read && <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{n.title}</p>
-                    {n.body && <p className="truncate text-xs text-muted-foreground">{n.body}</p>}
+                    <p className="line-clamp-2 font-medium">{n.title}</p>
+                    {n.body && <p className="line-clamp-2 text-xs text-muted-foreground">{n.body}</p>}
                     <p className="mt-0.5 text-xs text-muted-foreground">{timeAgo(n.created_at)}</p>
                   </div>
                 </div>
