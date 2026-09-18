@@ -63,6 +63,50 @@ export async function getProjectWiseReport(supabase: SupabaseClient<Database>): 
   });
 }
 
+export type DailyReportRow = {
+  createdToday: { id: string; name: string; created_at: string }[];
+  completedToday: { id: string; name: string; completed_at: string }[];
+  overdue: { id: string; name: string; due_date: string }[];
+};
+
+export async function getDailyReport(supabase: SupabaseClient<Database>): Promise<DailyReportRow> {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayStartIso = todayStart.toISOString();
+  const todayDateStr = todayStartIso.slice(0, 10);
+
+  const [{ data: created }, { data: completed }, { data: overdue }] = await Promise.all([
+    supabase
+      .from("tp_tasks")
+      .select("id, name, created_at")
+      .eq("is_draft", false)
+      .eq("is_archived", false)
+      .gte("created_at", todayStartIso)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("tp_tasks")
+      .select("id, name, completed_at")
+      .eq("is_draft", false)
+      .eq("is_archived", false)
+      .gte("completed_at", todayStartIso)
+      .order("completed_at", { ascending: false }),
+    supabase
+      .from("tp_tasks")
+      .select("id, name, due_date")
+      .eq("is_draft", false)
+      .eq("is_archived", false)
+      .neq("status", "done")
+      .lt("due_date", todayDateStr)
+      .order("due_date", { ascending: true }),
+  ]);
+
+  return {
+    createdToday: (created ?? []) as DailyReportRow["createdToday"],
+    completedToday: (completed ?? []) as DailyReportRow["completedToday"],
+    overdue: (overdue ?? []) as DailyReportRow["overdue"],
+  };
+}
+
 export type ActivityFeedRow = {
   id: string;
   action: string;

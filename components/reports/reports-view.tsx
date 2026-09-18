@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { PerformanceAnalysisChart } from "@/components/people/performance-analysis-chart";
 import type { MemberWithCounts } from "@/lib/queries/people";
-import type { StatusWiseRow, ProjectWiseRow, ActivityFeedRow } from "@/lib/queries/reports";
+import type { StatusWiseRow, ProjectWiseRow, ActivityFeedRow, DailyReportRow } from "@/lib/queries/reports";
 import type { PresenceEntry } from "@/lib/actions/presence";
 import { formatDateTime } from "@/lib/utils/format-date";
 
@@ -39,9 +39,9 @@ const TILES: { key: ReportKey; label: string; icon: typeof User; functional: boo
   { key: "project-wise", label: "Project Wise Report", icon: Briefcase, functional: true },
   { key: "status-wise", label: "Status Wise Report", icon: ListChecks, functional: true },
   { key: "user-activity", label: "User Activity Report", icon: Activity, functional: true },
-  { key: "user-activity-summary", label: "User Activity Summary", icon: Clock3, functional: false },
+  { key: "user-activity-summary", label: "User Activity Summary", icon: Clock3, functional: true },
   { key: "user-wise-performance", label: "User Wise Performance", icon: TrendingUp, functional: true },
-  { key: "daily-report", label: "Daily Report", icon: CalendarDays, functional: false },
+  { key: "daily-report", label: "Daily Report", icon: CalendarDays, functional: true },
 ];
 
 const STATUS_LABELS: Record<string, string> = {
@@ -90,16 +90,33 @@ export function ReportsView({
   projectWise,
   activityFeed,
   presence,
+  dailyReport,
 }: {
   members: MemberWithCounts[];
   statusWise: StatusWiseRow[];
   projectWise: ProjectWiseRow[];
   activityFeed: ActivityFeedRow[];
   presence: PresenceEntry[];
+  dailyReport: DailyReportRow;
 }) {
   const [active, setActive] = useState<ReportKey | null>(null);
   const [performanceMemberId, setPerformanceMemberId] = useState(members[0]?.id ?? "");
   const lastSeenByMember = new Map(presence.map((p) => [p.profileId, p.lastSeenAt]));
+
+  const activitySummary = (() => {
+    const counts = new Map<string, { name: string; count: number; lastAt: string }>();
+    for (const entry of activityFeed) {
+      if (!entry.actor) continue;
+      const existing = counts.get(entry.actor.id);
+      if (existing) {
+        existing.count += 1;
+        if (entry.created_at > existing.lastAt) existing.lastAt = entry.created_at;
+      } else {
+        counts.set(entry.actor.id, { name: entry.actor.full_name, count: 1, lastAt: entry.created_at });
+      }
+    }
+    return Array.from(counts.values()).sort((a, b) => b.count - a.count);
+  })();
 
   if (active) {
     const tile = TILES.find((t) => t.key === active)!;
@@ -279,6 +296,95 @@ export function ReportsView({
               </SelectContent>
             </Select>
             {performanceMemberId && <PerformanceAnalysisChart memberId={performanceMemberId} />}
+          </div>
+        )}
+
+        {active === "user-activity-summary" && (
+          <Card className="overflow-hidden p-0">
+            {activitySummary.length === 0 ? (
+              <div className="p-10 text-center text-sm text-muted-foreground">No activity yet.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/20 text-left text-xs text-muted-foreground">
+                      <th className="px-4 py-2.5 font-medium">User</th>
+                      <th className="px-4 py-2.5 font-medium">Actions (last 100)</th>
+                      <th className="px-4 py-2.5 font-medium">Most Recent</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activitySummary.map((row) => (
+                      <tr key={row.name} className="border-b last:border-b-0">
+                        <td className="px-4 py-3">{row.name}</td>
+                        <td className="px-4 py-3">{row.count}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatDateTime(new Date(row.lastAt))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {active === "daily-report" && (
+          <div className="space-y-6">
+            <Card className="overflow-hidden p-0">
+              <div className="border-b bg-muted/20 px-4 py-2.5 text-xs font-medium text-muted-foreground">
+                Created Today ({dailyReport.createdToday.length})
+              </div>
+              {dailyReport.createdToday.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">No tasks created today.</div>
+              ) : (
+                <div className="divide-y">
+                  {dailyReport.createdToday.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                      <span>{t.name}</span>
+                      <span className="text-xs text-muted-foreground">{formatDateTime(new Date(t.created_at))}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            <Card className="overflow-hidden p-0">
+              <div className="border-b bg-muted/20 px-4 py-2.5 text-xs font-medium text-muted-foreground">
+                Completed Today ({dailyReport.completedToday.length})
+              </div>
+              {dailyReport.completedToday.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">No tasks completed today.</div>
+              ) : (
+                <div className="divide-y">
+                  {dailyReport.completedToday.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                      <span>{t.name}</span>
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                        {formatDateTime(new Date(t.completed_at))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            <Card className="overflow-hidden p-0">
+              <div className="border-b bg-muted/20 px-4 py-2.5 text-xs font-medium text-muted-foreground">
+                Overdue ({dailyReport.overdue.length})
+              </div>
+              {dailyReport.overdue.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">Nothing overdue. 🎉</div>
+              ) : (
+                <div className="divide-y">
+                  {dailyReport.overdue.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                      <span>{t.name}</span>
+                      <span className="text-xs text-rose-600 dark:text-rose-400">Due {t.due_date}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
           </div>
         )}
       </div>
