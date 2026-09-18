@@ -25,7 +25,7 @@ export function PeopleDirectory({
   }, [members, search]);
 
   return (
-    <div className="flex w-72 shrink-0 flex-col border-r">
+    <div className="flex w-full shrink-0 flex-col border-r md:w-72">
       <div className="p-3">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

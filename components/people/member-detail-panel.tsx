@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { ChevronLeft, ChevronRight, Plus, ListChecks, Clock, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Plus, ListChecks, Clock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -33,12 +33,14 @@ export function MemberDetailPanel({
   projects,
   isSuperAdmin,
   isSelf,
+  onBack,
 }: {
   member: MemberWithCounts;
   members: { id: string; full_name: string }[];
   projects: { id: string; name: string }[];
   isSuperAdmin: boolean;
   isSelf: boolean;
+  onBack?: () => void;
 }) {
   const [priorityData, setPriorityData] = useState<PriorityBreakdown[]>([]);
   const [, startTransition] = useTransition();
@@ -63,7 +65,16 @@ export function MemberDetailPanel({
   }, [member.id]);
 
   return (
-    <div className="min-w-0 flex-1 space-y-5 overflow-y-auto p-6">
+    <div className="min-w-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" />
+          All People
+        </button>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <AvatarBadge name={member.full_name} size="md" profileId={member.id} />
