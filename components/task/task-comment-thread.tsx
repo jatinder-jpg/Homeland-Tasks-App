@@ -14,6 +14,7 @@ import {
   Trash2,
   Check,
   X,
+  MessageSquareQuote,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ import { getOrCreateTaskChannelAction, sendTaskCommentAction } from "@/lib/actio
 import { editMessageAction, deleteMessageAction } from "@/lib/actions/discussion";
 import { recordFileAction } from "@/lib/actions/documents";
 import { getOrgMembersAction } from "@/lib/actions/tasks";
+import { getQuickRepliesAction, type QuickReply } from "@/lib/actions/quick-replies";
 import { uploadFileToStorage } from "@/lib/utils/upload-to-storage";
 import type { TaskMessage } from "@/lib/queries/task-comments";
 
@@ -61,6 +63,8 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [quickReplyOpen, setQuickReplyOpen] = useState(false);
+  const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -69,6 +73,7 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? ""));
     getOrgMembersAction().then((data) => setMembers(data as ContactMember[]));
+    getQuickRepliesAction().then(setQuickReplies);
   }, []);
 
   useEffect(() => {
@@ -431,6 +436,32 @@ export function TaskCommentThread({ taskId }: { taskId: string }) {
             )}
           </PopoverContent>
         </Popover>
+        {quickReplies.length > 0 && (
+          <Popover open={quickReplyOpen} onOpenChange={setQuickReplyOpen}>
+            <PopoverTrigger asChild>
+              <button type="button" aria-label="Quick replies">
+                <MessageSquareQuote className="size-4 text-muted-foreground" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-1.5" align="start" side="top">
+              <div className="flex flex-col">
+                {quickReplies.map((reply) => (
+                  <button
+                    key={reply.id}
+                    type="button"
+                    className="rounded-md px-2.5 py-2 text-left text-sm hover:bg-accent"
+                    onClick={() => {
+                      setDraft(reply.text);
+                      setQuickReplyOpen(false);
+                    }}
+                  >
+                    {reply.text}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
         <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} />
         <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
         <Input

@@ -37,6 +37,8 @@ import {
 import { TaskViewTabs } from "@/components/task/task-view-tabs";
 import { TaskRow } from "@/components/task/task-row";
 import { TaskFormDialog } from "@/components/task/task-form-dialog";
+import { BulkImportDialog } from "@/components/task/bulk-import-dialog";
+import { QuickReplyManagerDialog } from "@/components/task/quick-reply-manager-dialog";
 import { groupTasksForList, GROUP_ORDER, GROUP_LABELS, type TaskDateType } from "@/lib/utils/task-grouping";
 import {
   bulkUpdateStatusAction,
@@ -88,6 +90,8 @@ export function TaskListView({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [quickReplyManagerOpen, setQuickReplyManagerOpen] = useState(false);
   const [isBulkPending, setIsBulkPending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
   const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
@@ -209,10 +213,6 @@ export function TaskListView({
     setSelectedIds(new Set());
   }
 
-  function comingSoon(feature: string) {
-    toast.info(`${feature} is coming soon`);
-  }
-
   function toggleColumn(key: ColumnKey) {
     setActiveColumns((prev) => {
       const next = prev.includes(key) ? prev.filter((c) => c !== key) : [...prev, key];
@@ -332,26 +332,8 @@ export function TaskListView({
               <DropdownMenuItem onSelect={toggleSelectionMode}>Bulk Edit</DropdownMenuItem>
               <DropdownMenuItem onSelect={handleBulkExport}>Bulk Export</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => comingSoon("Bulk Import")}>
-                Bulk Import
-                <span className="ml-auto text-xs text-muted-foreground">Soon</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => comingSoon("Import Draft Tasks")}>
-                Import Draft Tasks
-                <span className="ml-auto text-xs text-muted-foreground">Soon</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => comingSoon("Primary Recurring Tasks")}>
-                Primary Recurring Tasks
-                <span className="ml-auto text-xs text-muted-foreground">Soon</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => comingSoon("Quick Reply")}>
-                Quick Reply
-                <span className="ml-auto text-xs text-muted-foreground">Soon</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => comingSoon("Workflow Management")}>
-                Workflow Management
-                <span className="ml-auto text-xs text-muted-foreground">Beta</span>
-              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setBulkImportOpen(true)}>Bulk Import</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setQuickReplyManagerOpen(true)}>Manage Quick Replies</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -679,6 +661,15 @@ export function TaskListView({
         members={members}
         projects={projects}
       />
+
+      <BulkImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        projects={projects}
+        onImported={() => router.refresh()}
+      />
+
+      <QuickReplyManagerDialog open={quickReplyManagerOpen} onOpenChange={setQuickReplyManagerOpen} />
 
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
         <AlertDialogContent>

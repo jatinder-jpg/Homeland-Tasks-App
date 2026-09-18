@@ -912,6 +912,45 @@ export type Database = {
           },
         ]
       }
+      tp_quick_replies: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          text: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tp_quick_replies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "tp_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tp_quick_replies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "tp_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tp_services: {
         Row: {
           created_at: string
