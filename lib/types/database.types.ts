@@ -1008,6 +1008,7 @@ export type Database = {
           recurrence_frequency: string | null
           recurrence_interval: number
           remind_at: string | null
+          reminder_sent_at: string | null
           service_id: string | null
           site_visit: boolean
           status: string
@@ -1044,6 +1045,7 @@ export type Database = {
           recurrence_frequency?: string | null
           recurrence_interval?: number
           remind_at?: string | null
+          reminder_sent_at?: string | null
           service_id?: string | null
           site_visit?: boolean
           status?: string
@@ -1080,6 +1082,7 @@ export type Database = {
           recurrence_frequency?: string | null
           recurrence_interval?: number
           remind_at?: string | null
+          reminder_sent_at?: string | null
           service_id?: string | null
           site_visit?: boolean
           status?: string

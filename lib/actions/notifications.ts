@@ -13,7 +13,8 @@ export type CreateNotificationInput = {
     | "folder_shared"
     | "file_shared"
     | "task_urgent_alert"
-    | "task_review_requested";
+    | "task_review_requested"
+    | "task_reminder";
   title: string;
   body?: string;
   link?: string;
