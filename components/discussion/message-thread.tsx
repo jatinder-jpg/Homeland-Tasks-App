@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Send, MoreVertical, Pencil, Trash2, Check, X, Reply, Smile, Paperclip, FileText } from "lucide-react";
+import { Send, MoreVertical, Pencil, Trash2, Check, X, Reply, Smile, Paperclip, FileText, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,10 +84,12 @@ export function MessageThread({
   channel,
   initialMessages,
   currentUserId,
+  onBack,
 }: {
   channel: ChannelWithMembers;
   initialMessages: MessageWithSender[];
   currentUserId: string;
+  onBack?: () => void;
 }) {
   const [messages, setMessages] = useState(initialMessages);
   const [draft, setDraft] = useState("");
@@ -259,9 +261,16 @@ export function MessageThread({
 
   return (
     <div className="flex min-w-0 flex-1 flex-col">
-      <div className="border-b px-4 py-3">
-        <p className="font-semibold">{channelDisplayName(channel, currentUserId)}</p>
-        <ChatHeaderStatus channel={channel} currentUserId={currentUserId} />
+      <div className="flex items-center gap-2 border-b px-4 py-3">
+        {onBack && (
+          <button onClick={onBack} aria-label="Back to conversations" className="shrink-0 rounded p-1 hover:bg-accent">
+            <ArrowLeft className="size-4" />
+          </button>
+        )}
+        <div className="min-w-0">
+          <p className="truncate font-semibold">{channelDisplayName(channel, currentUserId)}</p>
+          <ChatHeaderStatus channel={channel} currentUserId={currentUserId} />
+        </div>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-4">

@@ -24,6 +24,15 @@ export function DiscussionView({
   const [activeChannel, setActiveChannel] = useState<ChannelWithMembers | null>(null);
   const [messages, setMessages] = useState<MessageWithSender[]>([]);
   const [isPending, startTransition] = useTransition();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => {
     if (!selectedId) {
@@ -74,33 +83,40 @@ export function DiscussionView({
     }
   }
 
+  const showList = !isMobile || !selectedId;
+  const showThread = !isMobile || Boolean(selectedId);
+
   return (
     <div className="flex h-full min-w-0">
-      <ChannelList
-        channels={channels}
-        archivedChannels={archivedChannels}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-        members={members}
-        currentUserId={currentUserId}
-        onCreated={handleCreated}
-        onArchiveChange={handleArchiveChange}
-        onDeleted={handleDeleted}
-        onRenamed={handleRenamed}
-      />
-      {activeChannel && !isPending ? (
-        <MessageThread
-          key={activeChannel.id}
-          channel={activeChannel}
-          initialMessages={messages}
+      {showList && (
+        <ChannelList
+          channels={channels}
+          archivedChannels={archivedChannels}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          members={members}
           currentUserId={currentUserId}
+          onCreated={handleCreated}
+          onArchiveChange={handleArchiveChange}
+          onDeleted={handleDeleted}
+          onRenamed={handleRenamed}
         />
-      ) : (
-        <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
-          <MessageSquare className="size-10" />
-          <p>{isPending ? "Loading…" : "Select or start a conversation"}</p>
-        </div>
       )}
+      {showThread &&
+        (activeChannel && !isPending ? (
+          <MessageThread
+            key={activeChannel.id}
+            channel={activeChannel}
+            initialMessages={messages}
+            currentUserId={currentUserId}
+            onBack={isMobile ? () => setSelectedId(null) : undefined}
+          />
+        ) : (
+          <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
+            <MessageSquare className="size-10" />
+            <p>{isPending ? "Loading…" : "Select or start a conversation"}</p>
+          </div>
+        ))}
     </div>
   );
 }

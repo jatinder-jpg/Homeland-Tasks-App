@@ -128,7 +128,7 @@ export function ChannelList({
   }
 
   return (
-    <div className="flex w-80 shrink-0 flex-col border-r">
+    <div className="flex w-full shrink-0 flex-col border-r md:w-80">
       <div className="space-y-3 p-3">
         <div className="flex gap-2">
           <Button size="sm" className="flex-1" onClick={() => setDialogMode("group")}>
