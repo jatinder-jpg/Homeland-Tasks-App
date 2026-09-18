@@ -79,7 +79,7 @@ export function ProjectDetailView({
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 p-6">
+    <div className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
       <Button variant="ghost" size="sm" className="-ml-2 w-fit" onClick={() => router.push("/project")}>
         <ArrowLeft className="size-4" />
         Back to Projects

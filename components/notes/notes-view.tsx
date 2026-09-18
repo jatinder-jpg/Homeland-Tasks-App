@@ -43,11 +43,11 @@ export function NotesView({
   }
 
   return (
-    <div className="flex h-full min-w-0 flex-col p-6">
-      <div className="mb-4 flex items-center justify-between gap-4">
+    <div className="flex h-full min-w-0 flex-col p-4 sm:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-heading text-lg font-bold">Notes</h1>
-        <div className="flex items-center gap-3">
-          <div className="relative w-72">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={search}

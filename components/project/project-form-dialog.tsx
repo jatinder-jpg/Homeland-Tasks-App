@@ -161,7 +161,7 @@ export function ProjectFormDialog({
             <Textarea id="description" rows={3} {...register("description")} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Status</Label>
               <Controller
@@ -224,7 +224,7 @@ export function ProjectFormDialog({
                 {isLocating ? "Locating…" : "Use current location"}
               </Button>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
                 <Label htmlFor="geofenceLat" className="text-xs text-muted-foreground">
                   Latitude

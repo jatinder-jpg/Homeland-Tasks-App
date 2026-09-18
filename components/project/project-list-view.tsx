@@ -45,7 +45,7 @@ export function ProjectListView({
   }, [source, search, status]);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-4 p-6">
+    <div className="mx-auto w-full max-w-5xl space-y-4 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-heading text-2xl font-bold">Project</h1>
         <Button size="sm" onClick={() => setDialogOpen(true)}>
