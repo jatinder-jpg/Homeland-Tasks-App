@@ -62,8 +62,23 @@ export function SettingsView({
   });
 
   return (
-    <div className="flex h-full min-w-0">
-      <div className="flex w-56 shrink-0 flex-col gap-1 border-r p-4">
+    <div className="flex h-full min-w-0 flex-col md:flex-row">
+      <div className="flex shrink-0 gap-1 overflow-x-auto border-b p-2 md:hidden">
+        {visibleTabs.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-sm ${
+              tab === key ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-accent"
+            }`}
+          >
+            <Icon className="size-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="hidden w-56 shrink-0 flex-col gap-1 border-r p-4 md:flex">
         <h1 className="mb-2 font-heading text-lg font-bold">Settings</h1>
         {visibleTabs.map(({ key, label, icon: Icon }) => (
           <button
@@ -79,7 +94,7 @@ export function SettingsView({
         ))}
       </div>
 
-      <div className="min-w-0 flex-1 p-6">
+      <div className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">
         {tab === "profile" && <ProfileTab fullName={fullName} phone={phone} email={email} />}
         {tab === "organization" && isSuperAdmin && (
           <OrganizationTab organization={organization} isSuperAdmin={isSuperAdmin} />
