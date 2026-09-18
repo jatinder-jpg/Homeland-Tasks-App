@@ -84,8 +84,32 @@ export function DocumentsView({
   const usagePct = Math.min(100, (storageUsageBytes / STORAGE_QUOTA_BYTES) * 100);
 
   return (
-    <div className="flex h-full min-w-0">
-      <div className="flex w-56 shrink-0 flex-col gap-1 border-r p-4">
+    <div className="flex h-full min-w-0 flex-col md:flex-row">
+      <div className="flex shrink-0 items-center gap-3 border-b p-2 md:hidden">
+        <div className="flex flex-1 gap-1 overflow-x-auto">
+          {scopeItems.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => {
+                setScope(key);
+                setOpenFolder(null);
+              }}
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-sm ${
+                scope === key && !openFolder ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              <Icon className="size-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="shrink-0 flex items-center gap-1 pr-2 text-xs text-muted-foreground">
+          <HardDrive className="size-3.5" />
+          {formatBytes(storageUsageBytes)}
+        </span>
+      </div>
+
+      <div className="hidden w-56 shrink-0 flex-col gap-1 border-r p-4 md:flex">
         <h1 className="mb-2 font-heading text-lg font-bold">Documents</h1>
         {scopeItems.map(({ key, label, icon: Icon }) => (
           <button
@@ -117,9 +141,9 @@ export function DocumentsView({
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col p-6">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div className="relative w-80">
+      <div className="flex min-w-0 flex-1 flex-col p-4 md:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={search}
