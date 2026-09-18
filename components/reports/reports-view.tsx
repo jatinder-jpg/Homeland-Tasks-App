@@ -121,7 +121,7 @@ export function ReportsView({
   if (active) {
     const tile = TILES.find((t) => t.key === active)!;
     return (
-      <div className="mx-auto w-full max-w-4xl space-y-6 p-6">
+      <div className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
         <button
           onClick={() => setActive(null)}
           className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -132,26 +132,28 @@ export function ReportsView({
 
         {active === "user-wise" && (
           <Card className="overflow-hidden p-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/20 text-left text-xs text-muted-foreground">
-                  <th className="px-4 py-2.5 font-medium">User</th>
-                  <th className="px-4 py-2.5 font-medium">Total</th>
-                  <th className="px-4 py-2.5 font-medium">Completed</th>
-                  <th className="px-4 py-2.5 font-medium">Incomplete</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((m) => (
-                  <tr key={m.id} className="border-b last:border-b-0">
-                    <td className="px-4 py-3">{m.full_name}</td>
-                    <td className="px-4 py-3">{m.totalTasks}</td>
-                    <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400">{m.completedTasks}</td>
-                    <td className="px-4 py-3 text-rose-600 dark:text-rose-400">{m.incompleteTasks}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/20 text-left text-xs text-muted-foreground">
+                    <th className="px-4 py-2.5 font-medium">User</th>
+                    <th className="px-4 py-2.5 font-medium">Total</th>
+                    <th className="px-4 py-2.5 font-medium">Completed</th>
+                    <th className="px-4 py-2.5 font-medium">Incomplete</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {members.map((m) => (
+                    <tr key={m.id} className="border-b last:border-b-0">
+                      <td className="px-4 py-3">{m.full_name}</td>
+                      <td className="px-4 py-3">{m.totalTasks}</td>
+                      <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400">{m.completedTasks}</td>
+                      <td className="px-4 py-3 text-rose-600 dark:text-rose-400">{m.incompleteTasks}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Card>
         )}
 
@@ -160,26 +162,28 @@ export function ReportsView({
             {projectWise.length === 0 ? (
               <div className="p-10 text-center text-sm text-muted-foreground">No projects yet.</div>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/20 text-left text-xs text-muted-foreground">
-                    <th className="px-4 py-2.5 font-medium">Project</th>
-                    <th className="px-4 py-2.5 font-medium">Total</th>
-                    <th className="px-4 py-2.5 font-medium">Completed</th>
-                    <th className="px-4 py-2.5 font-medium">Incomplete</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projectWise.map((p) => (
-                    <tr key={p.id} className="border-b last:border-b-0">
-                      <td className="px-4 py-3">{p.name}</td>
-                      <td className="px-4 py-3">{p.totalTasks}</td>
-                      <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400">{p.completedTasks}</td>
-                      <td className="px-4 py-3 text-rose-600 dark:text-rose-400">{p.incompleteTasks}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/20 text-left text-xs text-muted-foreground">
+                      <th className="px-4 py-2.5 font-medium">Project</th>
+                      <th className="px-4 py-2.5 font-medium">Total</th>
+                      <th className="px-4 py-2.5 font-medium">Completed</th>
+                      <th className="px-4 py-2.5 font-medium">Incomplete</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {projectWise.map((p) => (
+                      <tr key={p.id} className="border-b last:border-b-0">
+                        <td className="px-4 py-3">{p.name}</td>
+                        <td className="px-4 py-3">{p.totalTasks}</td>
+                        <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400">{p.completedTasks}</td>
+                        <td className="px-4 py-3 text-rose-600 dark:text-rose-400">{p.incompleteTasks}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </Card>
         )}
@@ -216,35 +220,37 @@ export function ReportsView({
               <div className="border-b bg-muted/20 px-4 py-2.5 text-xs font-medium text-muted-foreground">
                 Who&apos;s Online
               </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-xs text-muted-foreground">
-                    <th className="px-4 py-2 font-medium">User</th>
-                    <th className="px-4 py-2 font-medium">Status</th>
-                    <th className="px-4 py-2 font-medium">Last Seen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.map((m) => {
-                    const lastSeenAt = lastSeenByMember.get(m.id);
-                    const status = presenceStatus(lastSeenAt);
-                    return (
-                      <tr key={m.id} className="border-b last:border-b-0">
-                        <td className="px-4 py-2.5">{m.full_name}</td>
-                        <td className="px-4 py-2.5">
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className={`size-2 rounded-full ${PRESENCE_DOT[status]}`} />
-                            {PRESENCE_LABEL[status]}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-muted-foreground">
-                          {lastSeenAt ? formatDateTime(new Date(lastSeenAt)) : "Never"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-xs text-muted-foreground">
+                      <th className="px-4 py-2 font-medium">User</th>
+                      <th className="px-4 py-2 font-medium">Status</th>
+                      <th className="px-4 py-2 font-medium">Last Seen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {members.map((m) => {
+                      const lastSeenAt = lastSeenByMember.get(m.id);
+                      const status = presenceStatus(lastSeenAt);
+                      return (
+                        <tr key={m.id} className="border-b last:border-b-0">
+                          <td className="px-4 py-2.5">{m.full_name}</td>
+                          <td className="px-4 py-2.5">
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className={`size-2 rounded-full ${PRESENCE_DOT[status]}`} />
+                              {PRESENCE_LABEL[status]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-muted-foreground">
+                            {lastSeenAt ? formatDateTime(new Date(lastSeenAt)) : "Never"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </Card>
 
             <Card className="overflow-hidden p-0">
@@ -392,7 +398,7 @@ export function ReportsView({
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 p-6">
+    <div className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
       <h1 className="font-heading text-2xl font-bold">Reports</h1>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
         {TILES.map(({ key, label, icon: Icon, functional }) => (

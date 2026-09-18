@@ -96,7 +96,7 @@ export function AttendanceView({
   const records = tab === "mine" ? myRecords : allRecords;
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 p-6">
+    <div className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
       <h1 className="font-heading text-2xl font-bold">Attendance</h1>
 
       <Card className="p-5">
@@ -154,34 +154,36 @@ export function AttendanceView({
           {records.length === 0 ? (
             <div className="p-10 text-center text-sm text-muted-foreground">No attendance records yet.</div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/20 text-left text-xs text-muted-foreground">
-                  {tab === "all" && <th className="px-4 py-2.5 font-medium">User</th>}
-                  <th className="px-4 py-2.5 font-medium">Project</th>
-                  <th className="px-4 py-2.5 font-medium">Check In</th>
-                  <th className="px-4 py-2.5 font-medium">Check Out</th>
-                  <th className="px-4 py-2.5 font-medium">Duration</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((r) => (
-                  <tr key={r.id} className="border-b last:border-b-0">
-                    {tab === "all" && <td className="px-4 py-3">{r.profile?.full_name ?? "—"}</td>}
-                    <td className="px-4 py-3 text-muted-foreground">{r.project?.name ?? "—"}</td>
-                    <td className="px-4 py-3">{formatDateTime(new Date(r.check_in_at))}</td>
-                    <td className="px-4 py-3">
-                      {r.check_out_at ? (
-                        formatDateTime(new Date(r.check_out_at))
-                      ) : (
-                        <span className="text-emerald-600 dark:text-emerald-400">Active</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">{formatDuration(r.check_in_at, r.check_out_at)}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/20 text-left text-xs text-muted-foreground">
+                    {tab === "all" && <th className="px-4 py-2.5 font-medium">User</th>}
+                    <th className="px-4 py-2.5 font-medium">Project</th>
+                    <th className="px-4 py-2.5 font-medium">Check In</th>
+                    <th className="px-4 py-2.5 font-medium">Check Out</th>
+                    <th className="px-4 py-2.5 font-medium">Duration</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {records.map((r) => (
+                    <tr key={r.id} className="border-b last:border-b-0">
+                      {tab === "all" && <td className="px-4 py-3">{r.profile?.full_name ?? "—"}</td>}
+                      <td className="px-4 py-3 text-muted-foreground">{r.project?.name ?? "—"}</td>
+                      <td className="px-4 py-3">{formatDateTime(new Date(r.check_in_at))}</td>
+                      <td className="px-4 py-3">
+                        {r.check_out_at ? (
+                          formatDateTime(new Date(r.check_out_at))
+                        ) : (
+                          <span className="text-emerald-600 dark:text-emerald-400">Active</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">{formatDuration(r.check_in_at, r.check_out_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Card>
       </div>
